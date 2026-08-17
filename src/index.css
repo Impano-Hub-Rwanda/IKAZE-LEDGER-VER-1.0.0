@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    font-size: 14px;
+  }
+
+  body {
+    @apply bg-slate-100 text-slate-700 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  h1, h2, h3, h4 {
+    @apply text-slate-800;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    @apply bg-teal-200 text-teal-900;
+  }
+
+  .dark ::selection {
+    @apply bg-teal-900/60 text-teal-100;
+  }
+
+  .dark body {
+    @apply bg-slate-900 text-slate-300;
+  }
+
+  .dark h1, .dark h2, .dark h3, .dark h4 {
+    @apply text-slate-100;
+  }
+
+  * {
+    @apply border-slate-200;
+  }
+
+  .dark * {
+    @apply border-slate-700;
+  }
+}
+
+@layer components {
+  .input-base {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800
+    placeholder-slate-400 shadow-desk-sm transition-all
+    focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20
+    disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400;
+  }
+
+  .dark .input-base {
+    @apply border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500
+    focus:border-teal-400 focus:ring-teal-400/20;
+  }
+
+  .btn-base {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold
+    transition-all duration-150 ease-desk
+    focus:outline-none focus:ring-2 focus:ring-offset-2
+    disabled:cursor-not-allowed disabled:opacity-60
+    active:scale-[0.98];
+  }
+
+  .dark .btn-base {
+    @apply focus:ring-offset-slate-900;
+  }
+
+  .card-base {
+    @apply rounded-xl border border-slate-200 bg-white shadow-desk
+    dark:border-slate-700 dark:bg-slate-800;
+  }
+
+  .panel-base {
+    @apply rounded-xl border border-slate-200/70 bg-white shadow-panel
+    dark:border-slate-700/60 dark:bg-slate-800;
+  }
+
+  .nav-item-base {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
+    transition-all duration-150 ease-desk;
+  }
+
+  /* Desktop-grade table styling */
+  .table-base {
+    @apply w-full text-left text-sm;
+  }
+
+  .table-base thead th {
+    @apply sticky top-0 z-10 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500
+    dark:bg-slate-900/40 dark:text-slate-400;
+  }
+
+  .dark .table-base thead th {
+    @apply border-b border-slate-700;
+  }
+
+  .table-base tbody tr {
+    @apply transition-colors duration-100 hover:bg-slate-50 dark:hover:bg-slate-700/40;
+  }
+
+  .table-base tbody td {
+    @apply px-5 py-3 text-slate-700 dark:text-slate-300;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 4px 0;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full border-2 border-solid border-transparent bg-slate-300 bg-clip-content;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400 bg-clip-content;
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-slate-600 bg-clip-content;
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500 bg-clip-content;
+  }
+
+  .animate-page-in {
+    animation: page-in 0.3s ease-desk both;
+  }
+
+  .animate-modal-in {
+    animation: modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-overlay-in {
+    animation: overlay-in 0.2s ease-out both;
+  }
+
+  .animate-row-in {
+    animation: row-in 0.35s ease-out both;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.25s ease-out both;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.4s ease both;
+  }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

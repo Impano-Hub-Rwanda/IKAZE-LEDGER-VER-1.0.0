@@ -1,0 +1,32 @@
+[package]
+name = "Ikaze-Ledger"
+version = "1.0.0"
+description = "Professional debt management for small businesses"
+authors = ["Marcel UWIMANA"]
+edition = "2021"
+rust-version = "1.70"
+
+[lib]
+name = "dms_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-store = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-os = "2"
+tauri-plugin-process = "2"
+tauri-plugin-global-shortcut = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
