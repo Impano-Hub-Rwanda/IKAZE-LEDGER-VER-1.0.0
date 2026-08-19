@@ -411,13 +411,25 @@ export function ReportsPage() {
           };
         }
       } else if (reportType === 'customers') {
-        const r = await db.query<{ id: number; full_name: string; phone: string | null; address: string | null; debts: number }>(
-          `SELECT c.id, c.full_name, c.phone, c.address,
+        const r = await db.query<{
+          id: number;
+          full_name: string;
+          phone: string | null;
+          address: string | null;
+          tin_number: string | null;
+          debts: number;
+        }>(
+          `SELECT c.id, c.full_name, c.phone, c.address, c.tin_number,
                   (SELECT COUNT(*) FROM debts d WHERE d.customer_id = c.id) AS debts
            FROM customers c ORDER BY c.full_name`,
         );
         const rows = (r.rows as typeof r.rows).map((x, i) => ({
-          no: padNum(i + 1), name: x.full_name, phone: x.phone ?? '—', address: x.address ?? '—', debts: x.debts,
+          no: padNum(i + 1),
+          name: x.full_name,
+          tinNumber: x.tin_number ?? '—',
+          phone: x.phone ?? '—',
+          address: x.address ?? '—',
+          debts: x.debts,
         }));
         res = {
           sections: [{
@@ -425,6 +437,7 @@ export function ReportsPage() {
             columns: [
               { header: tr.colNo, dataKey: 'no', align: 'center' },
               { header: tr.colName, dataKey: 'name' },
+              { header: 'TIN Number', dataKey: 'tinNumber' },
               { header: tr.colPhone, dataKey: 'phone' },
               { header: tr.colAddress, dataKey: 'address' },
               { header: tr.colCount, dataKey: 'debts', align: 'center' },
