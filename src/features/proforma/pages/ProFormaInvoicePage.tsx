@@ -88,7 +88,7 @@ export function ProFormaInvoicePage() {
   const [enableTax, setEnableTax] = useState(false);
   const [showWatermark, setShowWatermark] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
-  const [terms, setTerms] = useState(tp.termsDefault);
+  const [terms, setTerms] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
 
   const [error, setError] = useState('');
@@ -623,10 +623,10 @@ ${footerHtml}
     setLineItems([{ id: lineIdCounter++, productId: '', productName: '', description: '', unit: '', quantity: 1, unitPrice: 0, total: 0 }]);
     setDiscount(0); setDiscountType('fixed'); setEnableTax(false);
     setShowWatermark(false); setShowSignature(false);
-    setTerms(tp.termsDefault); setCustomerNotes('');
+    setTerms(''); setCustomerNotes('');
     setError(''); setSuccess('');
     void generateInvoiceNo().then(setInvoiceNo);
-  }, [generateInvoiceNo, tp.termsDefault]);
+  }, [generateInvoiceNo]);
 
   const handlePdf = useCallback(async () => {
     const { default: jsPDF } = await import('jspdf');
