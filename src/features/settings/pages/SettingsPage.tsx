@@ -818,7 +818,7 @@ export function SettingsPage() {
                 Ikaze Ledger is an offline-first debt and customer management application built for small and medium businesses. It lets you record customer debts, track partial and full payments, manage product inventory and services, issue professional proforma invoices, and generate printable reports and receipts — all without an internet connection. Your data stays securely on your device, with built-in backup and restore for peace of mind.
               </p>
               <div className="mt-4 rounded-lg bg-teal-50 px-6 py-2 text-sm font-bold text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">
-                Powered by MUD
+                Powered by MUD software company
               </div>
             </div>
           </div>
