@@ -474,7 +474,6 @@ export async function exportReportToPdf(opts: PdfExportOptions, info: BusinessIn
       margin: { left: m, right: m, bottom: dims.padBottom + 4 },
     });
 
-    // @ts-expect-error lastAutoTable injected by plugin
     y = (doc.lastAutoTable?.finalY ?? tableY) + 4;
 
     if (section.totalLabel && section.totalValue) {
