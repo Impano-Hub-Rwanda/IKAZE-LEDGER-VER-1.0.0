@@ -48,6 +48,9 @@ import {
   BRAND_TEAL_DARK,
   BRAND_TEAL_LIGHT,
 } from '../../../lib/printLayout';
+
+import type { Customer, Product } from '../../../types';
+import type { Service } from '../../../types/service';
 declare module 'jspdf' {
   interface jsPDF {
     lastAutoTable?: {
@@ -55,10 +58,6 @@ declare module 'jspdf' {
     };
   }
 }
-
-import type { Customer, Product } from '../../../types';
-import type { Service } from '../../../types/service';
-
 type ItemType = 'product' | 'service';
 
 interface LineItem {
