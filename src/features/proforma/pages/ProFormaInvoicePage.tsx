@@ -2424,10 +2424,8 @@ export function ProFormaInvoicePage() {
       },
     });
 
-    // @ts-expect-error injected by plugin
-    const afterTable =
-      (doc.lastAutoTable?.finalY ??
-        headerY) + 6;
+ const afterTable =
+  (doc.lastAutoTable?.finalY ?? headerY) + 6;
 
     /*
      * TOTALS
