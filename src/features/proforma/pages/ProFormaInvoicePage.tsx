@@ -37,6 +37,7 @@ import { Alert } from '../../../components/ui/Alert';
 import { PageHeader } from '../../../components/ui/Primitives';
 import { PrintPreviewModal } from '../../../components/ui/PrintPreviewModal';
 
+
 import {
   buildPrintHeader,
   buildPrintFooter,
@@ -47,6 +48,13 @@ import {
   BRAND_TEAL_DARK,
   BRAND_TEAL_LIGHT,
 } from '../../../lib/printLayout';
+declare module 'jspdf' {
+  interface jsPDF {
+    lastAutoTable?: {
+      finalY: number;
+    };
+  }
+}
 
 import type { Customer, Product } from '../../../types';
 import type { Service } from '../../../types/service';
