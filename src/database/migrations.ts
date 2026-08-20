@@ -39,6 +39,7 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+
   `ALTER TABLE customers ADD COLUMN IF NOT EXISTS tin_number TEXT`,
 
   `CREATE TABLE IF NOT EXISTS products (
@@ -90,13 +91,13 @@ export const SCHEMA_STATEMENTS: string[] = [
   )`,
 
   `CREATE TABLE IF NOT EXISTS inventory_movements (
-    id          SERIAL PRIMARY KEY,
-    product_id  INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    id         SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
     movement_type TEXT NOT NULL CHECK (movement_type IN ('in','out','adjust')),
     quantity_change INTEGER NOT NULL,
-    reason      TEXT,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    reason     TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
 
   `CREATE TABLE IF NOT EXISTS settings (
@@ -120,9 +121,7 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
 
-  // Settings additions — individual ALTER TABLE statements.
-  // PGlite supports ADD COLUMN IF NOT EXISTS as standalone statements.
-  // Do NOT wrap these in DO $$ ... END $$ blocks — PGlite rejects PL/pgSQL.
+  // Settings additions
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS owner_name TEXT`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS email TEXT`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS slogan TEXT`,
@@ -133,7 +132,8 @@ export const SCHEMA_STATEMENTS: string[] = [
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS report_paper_size TEXT NOT NULL DEFAULT 'a4'`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_print_debt BOOLEAN NOT NULL DEFAULT TRUE`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_print_payment BOOLEAN NOT NULL DEFAULT TRUE`,
-  // ── Expanded settings columns (v1.0 production) ──
+
+  // Expanded settings columns (v1.0 production)
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS logo_data TEXT`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS tax_rate NUMERIC(5,2) NOT NULL DEFAULT 0`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS tax_enabled BOOLEAN NOT NULL DEFAULT FALSE`,
@@ -155,7 +155,8 @@ export const SCHEMA_STATEMENTS: string[] = [
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS open_at_startup BOOLEAN NOT NULL DEFAULT FALSE`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS minimize_to_tray BOOLEAN NOT NULL DEFAULT TRUE`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS global_shortcut TEXT NOT NULL DEFAULT 'Ctrl+Shift+D'`,
-  // ── Business info expansion (TIN, RSSB, Website, Bank, owner name switches) ──
+
+  // Business info expansion
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS tin_number TEXT`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS rssb_number TEXT`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS website TEXT`,
@@ -163,12 +164,14 @@ export const SCHEMA_STATEMENTS: string[] = [
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS bank_account TEXT`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS show_owner_on_reports BOOLEAN NOT NULL DEFAULT TRUE`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS show_owner_on_receipts BOOLEAN NOT NULL DEFAULT TRUE`,
-  // ── Products: unit, description, category, SKU ──
+
+  // Products: unit, description, category, SKU
   `ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT`,
   `ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT`,
   `ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT`,
   `ALTER TABLE products ADD COLUMN IF NOT EXISTS sku TEXT`,
-  // ── Services table ──
+
+  // Services table
   `CREATE TABLE IF NOT EXISTS services (
     id            SERIAL PRIMARY KEY,
     name          TEXT NOT NULL,
@@ -178,9 +181,11 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
-  // ── debt_items: support both products and services ──
+
+  // debt_items: support both products and services
   `ALTER TABLE debt_items ADD COLUMN IF NOT EXISTS item_type TEXT NOT NULL DEFAULT 'product' CHECK (item_type IN ('product','service'))`,
   `ALTER TABLE debt_items ADD COLUMN IF NOT EXISTS service_id INTEGER REFERENCES services(id) ON DELETE SET NULL`,
+
   `CREATE INDEX IF NOT EXISTS idx_services_name ON services(name)`,
   `CREATE INDEX IF NOT EXISTS idx_debt_items_service_id ON debt_items(service_id)`,
   `CREATE INDEX IF NOT EXISTS idx_debt_items_item_type ON debt_items(item_type)`,
@@ -197,6 +202,7 @@ export const SCHEMA_STATEMENTS: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_customers_created_at ON customers(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)`,
   `CREATE INDEX IF NOT EXISTS idx_products_stock_quantity ON products(stock_quantity)`,
+
   // ── Pro Forma Invoices ──
   `CREATE TABLE IF NOT EXISTS proforma_invoices (
     id            SERIAL PRIMARY KEY,
@@ -222,8 +228,9 @@ export const SCHEMA_STATEMENTS: string[] = [
     show_watermark BOOLEAN NOT NULL DEFAULT FALSE,
     show_signature BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+
   `CREATE TABLE IF NOT EXISTS proforma_items (
     id            SERIAL PRIMARY KEY,
     proforma_id   INTEGER NOT NULL REFERENCES proforma_invoices(id) ON DELETE CASCADE,
@@ -235,6 +242,14 @@ export const SCHEMA_STATEMENTS: string[] = [
     unit_price    NUMERIC(14,2) NOT NULL DEFAULT 0,
     total         NUMERIC(14,2) NOT NULL DEFAULT 0
   )`,
+
+  // ── Pro Forma Items: support both products and services ──
+  `ALTER TABLE proforma_items ADD COLUMN IF NOT EXISTS item_type TEXT NOT NULL DEFAULT 'product' CHECK (item_type IN ('product','service'))`,
+  `ALTER TABLE proforma_items ADD COLUMN IF NOT EXISTS service_id INTEGER REFERENCES services(id) ON DELETE SET NULL`,
+
+  `CREATE INDEX IF NOT EXISTS idx_proforma_items_service_id ON proforma_items(service_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_proforma_items_item_type ON proforma_items(item_type)`,
+
   `CREATE INDEX IF NOT EXISTS idx_proforma_customer_id ON proforma_invoices(customer_id)`,
   `CREATE INDEX IF NOT EXISTS idx_proforma_status ON proforma_invoices(status)`,
   `CREATE INDEX IF NOT EXISTS idx_proforma_items_proforma_id ON proforma_items(proforma_id)`,
