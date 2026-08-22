@@ -629,85 +629,121 @@ export const rw: TranslationKeys = {
     movementType: 'Ubwoko',
     change: 'Impinduka',
   },
-  help: {
-    title: 'Ubufasha n\'Umuyoboro w\'Ikoreshwa',
-    subtitle: 'Menya uko wakoresha buri kigungo cya Ikaze Ledger',
-    help_dashboard: 'Bona icecengeranyo cy\'ubucuruzi bwawe mu kanya gato.',
-    help_customers: 'Cunga ububiko bw\'abakiriya n\'amakuru yabo.',
-    help_products: 'Ongeraho no gucunga ibicuruzwa n\'amaserivisi ugurisha.',
-    help_inventory: 'Kurikirana ibyibitse n\'ibyimuka by\'ibicuruzwa.',
-    help_debts: 'Andika no gukurikirana amadeni y\'abakiriya.',
-    help_payments: 'Andika amafaranga yishyuwe n\'guha abakiriya impapuro z\'ubwishyu.',
-    help_proforma: 'Kora inyemezabwishu y\'ibanze (proforma) z\'umwuga.',
-    help_reports: 'Kora no kuvamo raporo z\'ubucuruzi.',
-    help_settings: 'Shyiraho amakuru y\'ubucuruzi bwawe n\'ibyo ukunda mu app.',
-    help_general_tips: 'Inama z\'ingenzi',
-    help_tips: 'Inama zifasha mu gukoresha neza app.',
-    help_dashboard_overview_title: 'Reba dashboard yawe',
-    help_dashboard_overview_body: 'Dashboard yerekana icecengeranyo cy\'ubucuruzi bwawe: amadeni yose, amafaranga yishyuwe, amafaranga acitse, n\'ibyakozwe vuba. Ni ipaji ya mbere ubona nyuma yo kwinjira (keretse wahisemo guhindura ipaji y\'itangira mu Igenamiterere).',
-    help_dashboard_stats_title: 'Soma imibare y\'ibyegeranyo',
-    help_dashboard_stats_body: 'Buri karita yerekana igipimo cy\'ingenzi — abakiriya bose, amadeni akoze, amafaranga yishyuwe uyu munsi, n\'amadeni arenze igihe. Kanda ku karita kugira ngo ugere ku gice bijyanye.',
-    help_dashboard_charts_title: 'Vya inyigisho z\'ibishusho',
-    help_dashboard_charts_body: 'Ibishusho byerekana imiterere y\'ubwishyu n\'imeze y\'amadeni ku gihe. Bivuze mu kubona imiterere no gucunga neza ibyangombwa.',
-    help_customers_add_title: 'Ongeraho umukiriya mushya',
-    help_customers_add_body: 'Gana ku Bakiriya ukande "Ongeraho Umukiriya". Uzuze izina, telefone, aderesi, n\'TIN (iyi nyuma n\'iy\'ibitengetse). Kanda Kubika kugira ngo ureme ibyangombwa ry\'umukiriya.',
-    help_customers_edit_title: 'Hindura cyangwa sivura umukiriya',
-    help_customers_edit_body: 'Kanda ku kimenyetso cyo guhindura hakurya y\'umukiriya kugira ngo uvugurure amakuru ye. Kanda ku kimenyetso cya trash kugira ngo ushave umukiriya. Ntiushobora gusiba umukiriya ufite ideni ritishyuwe.',
-    help_customers_tin_title: 'Kurikirana TIN',
-    help_customers_tin_body: 'Iyo wongereye TIN (Numero y\'ubutumwa bw\'imisoro) ku mukiriya, iza ku mpapuro ze z\'ubwishyu n\'inyemezabwishu z\'ibanze (proforma) mu buryo bwikora.',
-    help_products_add_title: 'Ongeraho igicuruzwa',
-    help_products_add_body: 'Gana ku Bicuruzwa n\'Amaserivisi ukande "Ongeraho Igicuruzwa". Injiza izina, modeli, igiciro cyo kugura, igiciro cyo gucuruza, n\'igitigiri. Igiciro cyo gucuruza ni cyo umukiriya yishyura.',
-    help_products_services_title: 'Ongeraho serivisi',
-    help_products_services_body: 'Hindura ku tab y\'Amaserivisi kugira ngo wongere amaserivisi (urugero: pmu, inama). Amaserivisi nta gitingirizinga y\'ibyibitse afite — afite igiciro gisanzwe gushobora guhindurwa iyo cyongereye ku ideni.',
-    help_products_pricing_title: 'Shyiraho amagiciro neza',
-    help_products_pricing_body: 'Igiciro cyo kugura ni icyo wahuye. Igiciro cyo gucuruza ni icyo usaba. Isigaye ni inyungu yawe. Ushobora guhindura amagiciro ku munsi ku wundi uhindura igicuruzwa.',
-    help_inventory_stock_title: 'Kugenzura ibyibitse',
-    help_inventory_stock_body: 'Ipaji y\'Ibyibitsi yerekana ibicuruzwa byose n\'ibyibitse bya byo. Ibicuruzwa biri munsi y\'igipimo cy\'ibyibitse bike byagaragajwe kugira ngo ubure igihe cyo kongera igitungo.',
-    help_inventory_movements_title: 'Andika ibyimuka by\'ibyibitse',
-    help_inventory_movements_body: 'Kanda "Guhindura Ibyibitswe" ku gicuruzwa kugira ngo wandike ibyinjijwe, ibyacitse, cyangwa ibyahinduwe. Buri cyimuka cyanditswe hamwe n\'impamvu kugira ngo habeho ibyangombwa.',
-    help_inventory_auto_title: 'Ibyibitse byikora',
-    help_inventory_auto_body: 'Iyo waremye ideni rikubiyemo ibicuruzwa, ibyibitse bihinduka mu buryo bwikora. Iyo wanditse ubwishyu, ibyibitse ntibyahinduka — ahubwo igisirike cy\'ideni gihinduka gusa.',
-    help_debts_create_title: 'Tanga ideni rishya',
-    help_debts_create_body: 'Gana ku Madeni ukande "Ongeraho Ideni". Hitamo umukiriya, ongeraho ibicuruzwa cyangwa amaserivisi ku ideni, shyiraho ibigero n\'amagiciro, hanyuma ubike. Igiteranyo cyabaruwe mu buryo bwikora.',
-    help_debts_items_title: 'Ongeraho ibice ku ideni',
-    help_debts_items_body: 'Ushobora kongeraho ibicuruzwa n\'amaserivisi ku ideni rimwe. Hitamo ubwoko bw\'ikintu, hitamo igicuruzwa cyangwa serivisi, shyiraho igitereranyo, kandi igiteranyo cyungutse kibaruwa bwite.',
-    help_debts_receipt_title: 'Capa impapuro z\'ideni',
-    help_debts_receipt_body: 'Nyuma yo kubika ideni, idirishya ryo gucapa rirakingurwa bwite iyaba gucapa-bwite cyemejewse mu Igenamiterere. Ushobora no gucapa nyuma ukanda ku kimenyetso cya printer ku ideni.',
-    help_debts_delivery_title: 'Capa impapuro z\'ohereza',
-    help_debts_delivery_body: 'Kanda ku kimenyetso cya packaji ku ideni kugira ngo ucape impapuro z\'ohereza. Zifasha iyo uhereza ibicuruzwa ku mukiriya — zerekana ibice nta magiciro.',
-    help_payments_record_title: 'Andika ubwishyu',
-    help_payments_record_body: 'Gana ku ideni ukande "Andika Ubwishyu". Shyiraho igiciro cyishyuwe, hitamo uburyo bw\'ubwishyu (amafaranga, mobile money, banki, cyangwa ibindi), hanyuma ubike. Igisirike cy\'ideni kihinduka bwite.',
-    help_payments_partial_title: 'Ubwishyu bwo mu gice',
-    help_payments_partial_body: 'Ushobora kwandika ubwishyu bwo mu gice ku gihe. Imimerere y\'ideni ihinduka kuva "bidasabwe" igera kuri "byishyuwe mu gice" hanyuma igera kuri "byishyuwe" iyo byuzuye.',
-    help_payments_receipt_title: 'Capa impapuro z\'ubwishyu',
-    help_payments_receipt_body: 'Nyuma yo kwandika ubwishyu, impapuro zicapwa bwite iyaba gucapa-bwite cyemejewse. Ushobora no gucapa nyuma ku ipaji y\'Ubwishyu ukanda ku kimenyetso cya printer.',
-    help_proforma_create_title: 'Kora inyemezabwishu y\'ibanze (proforma)',
-    help_proforma_create_body: 'Gana ku Nyezabwishu z\'ibanze ukande "Inyandiko Nshya". Hitamo umukiriya (cyangwa twinjize amakuru wigenga), ongeraho ibice, shyiraho amabwiriza. Proforma ni igitekerezo — ntabwo ari ideni kugeza iyemezwe.',
-    help_proforma_items_title: 'Ongeraho ibice ku nyandiko',
-    help_proforma_items_body: 'Ongeraho ibicuruzwa cyangwa amaserivisi, shyiraho ibigero n\'amagiciro. Igiteranyo, imisoro, agaciro k\'agatabo, n\'igiteranyo cyungutse byabaruwa bwite.',
-    help_proforma_discount_title: 'Shyiraho agatabo n\'imiroro',
-    help_proforma_discount_body: 'Ushobora gushyiraho agatabo k\'agaciro cyangwa ku ijana. Emera imisoro with igipimo gishobora guhindurwa. Ibi bimenyetso bigaragara ku nyandiko icapwe.',
-    help_proforma_pdf_title: 'Capa cyangwa uvemo PDF',
-    help_proforma_pdf_body: 'Kanda "Capa" kugira ngo ucape inyandiko mu buryo bwikora, cyangwa "Kura PDF" kugira ngo uyibike. Inyandiko ikubiyemo logo yawe, amakuru y\'ubucuruzi, n\'amabwiriza.',
-    help_reports_types_title: 'Hitamo ubwoko bwa raporo',
-    help_reports_types_body: 'Ipaji ya Raporo ifite ubwoko butandukanye bwa raporo: ibyegeranyo by\'abakiriya, ibyegeranyo by\'amadeni,amateka y\'ubwishyu, n\'ibyegeranyo by\'ibyibitse. Hitamo ubwoko bw\'ibyangombwa.',
-    help_reports_export_title: 'Vamo cyangwa ucape raporo',
-    help_reports_export_body: 'Nyuma yo gukora raporo, ushobora kuycapa, kuivamo na PDF, cyangwa kuivamo na Excel. Ingano y\'urupapuro (A4 cyangwa A5) rushobora guhindurwa mu Igenamiterere.',
-    help_settings_business_title: 'Amakuru y\'ubucuruzi',
-    help_settings_business_body: 'Mu Igenamiterere > Ubucuruzi, injiza izina ry\'ubucuruzi, logo, amakuru y\'ubucuruzi, TIN, RSSB, n\'amakuru ya banki. Ibi bigaragara ku mpapuro zose, inyandiko, na raporo.',
-    help_settings_app_title: 'Igenamiterere ry\'app',
-    help_settings_app_body: 'Mu Igenamiterere > App, hitamo ururimi (Cyongereza cyangwa Ikinyarwanda), isura (yera cyangwa yijimye), imiterere y\'itarike, ingano y\'impapuro, n\'urupapuro. Ushobora no guhitamo ipaji ifungura nyuma yo kwinjira.',
-    help_settings_receipt_title: 'Igenamiterere ry\'impapuro',
-    help_settings_receipt_body: 'Mu Igenamiterere > Impapuro, hitamo igitekerezo cy\'umutwe, emera cyangwa hakanakwe logo, umurongo w\'isinya, n\'akamenyetro. Shyiraho igipimo cy\'imiroro kugira ngo iyi-onke mu buryo bwikora ku mpapuro.',
-    help_settings_security_title: 'Igenamiterere ry\'umutekano',
-    help_settings_security_body: 'Mu Igenamiterere > Umutekano, shyiraho PIN y\'app (imibare 4-6) yaba yakenewe mbere y\'ibikorwa by\'ingenzi nko gusiba ibyangombwa cyangwa gugarura ibyangombwa. Shyiraho igihe cy\'inactivity kugira ngo app ifungike bwite nyuma y\'igihe cyahiswemo.',
-    help_settings_backup_title: 'Kubika no kugarura',
-    help_settings_backup_body: 'Mu Igenamiterere > Kubika, kora ibyangombwa bikora, ema kubika-bwite ku gihe cyahiswemo, kandi ugarure mu dosiye y\'ibyangombwa. Buri gihe bika ibyangombwa mbere yo gukora impinduka z\'ingenzi.',
-    help_tips_offline_title: 'Kora nta internete',
-    help_tips_offline_body: 'Ikaze Ledger ikora mu buryo bwikora. Amakuru yose abika kuri mudasobwa yawe. Nta internete ikenewe mu gukoresha buri kigungo.',
-    help_tips_backup_title: 'Bika buri gihe',
-    help_tips_backup_body: 'Ema kubika-bwite mu Igenamiterere > Kubika uhitemo dosiye yo kubika. Ibyangombwa bika mu buryo bwikora ku gihe cyahiswemo. Ibi bika amakuru yawe iyaba mudasobwa yabuze cyangwa yangiritse.',
-    help_tips_search_title: 'Koresha ishakiro',
-    help_tips_search_body: 'Buri ipaji ifite umwanya w\'ishakire hejuru. Koresha kugira ngo uhite ubone abakiriya, amadeni, ubwishyu, cyangwa ibicuruzwa ku izina, telefone, cyangwa ibindi bisobanuro.',
-  },
+help: {
+title: 'Ubufasha n’Uko Ikaze Ledger Ikoreshwa',
+subtitle: 'Menya uko wakoresha buri gice cya Ikaze Ledger.',
+
+help_dashboard: 'Reba incamake y’ibikorwa by’ubucuruzi bwawe mu kanya gato.',
+help_customers: 'Gucunga abakiriya n’amakuru yabo.',
+help_products: 'Ongeraho kandi ucunge ibicuruzwa n’amaserivisi ugurisha.',
+help_inventory: 'Kurikirana ibicuruzwa biri mu bubiko n’imigendekere yabyo.',
+help_debts: 'Kwandika no gukurikirana amadeni y’abakiriya.',
+help_payments: 'Kwandika ubwishyu no guha abakiriya inyemezabwishyu.',
+help_proforma: 'Gukora Proforma Invoice z’umwuga.',
+help_reports: 'Gukora no kubika raporo z’ubucuruzi.',
+help_settings: 'Gushyiraho amakuru y’ubucuruzi n’imiterere ya porogaramu.',
+
+help_general_tips: 'Inama z’ingenzi',
+help_tips: 'Inama zagufasha gukoresha neza Ikaze Ledger.',
+
+help_dashboard_overview_title: 'Reba incamake y’ubucuruzi bwawe',
+help_dashboard_overview_body: 'Dashboard igaragaza incamake y’ibikorwa by’ubucuruzi bwawe, harimo amadeni yose, amafaranga yakiriwe, amafaranga atarishyurwa n’ibikorwa biheruka. Ni yo page ubona nyuma yo kwinjira, keretse wahisemo indi page yo gutangiriraho mu Igenamiterere.',
+
+help_dashboard_stats_title: 'Soma imibare y’ingenzi',
+help_dashboard_stats_body: 'Buri karita igaragaza imibare y’ingenzi y’ubucuruzi bwawe, nk’umubare w’abakiriya, amadeni, amafaranga yakiriwe n’amadeni yarengeje igihe. Kanda kuri karita kugira ngo ujye mu gice kijyanye na yo.',
+
+help_dashboard_charts_title: 'Reba ibishushanyo by’imibare',
+help_dashboard_charts_body: 'Ibishushanyo bigufasha kubona uko ubwishyu n’amadeni bihagaze uko igihe kigenda. Bikora ku buryo bworoshye kubona imigendekere y’ibikorwa no gufata imyanzuro ishingiye ku makuru.',
+
+help_customers_add_title: 'Ongeraho umukiriya mushya',
+help_customers_add_body: 'Jya ku Bakiriya, ukande "Ongeraho Umukiriya". Andikamo izina, telefone, aderesi na TIN niba bihari. Hanyuma ukande "Kubika" kugira ngo amakuru y’umukiriya abikwe.',
+
+help_customers_edit_title: 'Hindura cyangwa usibe umukiriya',
+help_customers_edit_body: 'Kanda ku kimenyetso cyo guhindura kiri ku murongo w’umukiriya kugira ngo uhindure amakuru ye. Kugira ngo usibe umukiriya, kanda ku kimenyetso cyo gusiba. Umukiriya ufite ideni ritarishyurwa ntashobora gusibwa.',
+
+help_customers_tin_title: 'Gucunga TIN y’umukiriya',
+help_customers_tin_body: 'Iyo wongeye TIN y’umukiriya, igaragara ku nyemezabwishyu, Proforma Invoice n’izindi nyandiko z’umukiriya mu buryo bwikora.',
+
+help_products_add_title: 'Ongeraho igicuruzwa',
+help_products_add_body: 'Jya ku Bicuruzwa n’Amaserivisi, ukande "Ongeraho Igicuruzwa". Injizamo izina, modeli niba ihari, igiciro cyo kugura, igiciro cyo kugurisha n’umubare w’ibicuruzwa bihari. Igiciro cyo kugurisha ni cyo umukiriya yishyura.',
+
+help_products_services_title: 'Ongeraho serivisi',
+help_products_services_body: 'Jya ku gice cy’Amaserivisi kugira ngo wongere serivisi utanga, urugero nk’ubujyanama cyangwa izindi serivisi. Serivisi ntizigira umubare w’ibicuruzwa bibitswe; zigira igiciro gishobora guhindurwa igihe uzishyira ku ideni cyangwa ku yindi nyandiko.',
+
+help_products_pricing_title: 'Shyiraho ibiciro neza',
+help_products_pricing_body: 'Igiciro cyo kugura ni amafaranga wishyuye kugira ngo ubone igicuruzwa. Igiciro cyo kugurisha ni amafaranga ugishyiraho kugira ngo umukiriya akigure. Itandukaniro riri hagati y’ibiciro byombi ni ryo rigena inyungu yawe. Ushobora guhindura ibiciro igihe icyo ari cyo cyose.',
+
+help_inventory_stock_title: 'Kugenzura ububiko',
+help_inventory_stock_body: 'Ipaji y’Ububiko igaragaza ibicuruzwa byose n’umubare wabyo uri mu bubiko. Ibicuruzwa biri hafi kurangira cyangwa biri munsi y’urugero rw’ububiko bwashyizweho bigaragazwa kugira ngo ubashe kubisubizamo ku gihe.',
+
+help_inventory_movements_title: 'Kwandika imigendekere y’ububiko',
+help_inventory_movements_body: 'Kanda "Hindura Ububiko" ku gicuruzwa kugira ngo wandike ibicuruzwa byinjijwe, ibyasohotse cyangwa ibyakosowe. Buri gikorwa kibikwa hamwe n’impamvu yacyo kugira ngo amateka y’ububiko akurikiranwe neza.',
+
+help_inventory_auto_title: 'Ububiko buhinduka mu buryo bwikora',
+help_inventory_auto_body: 'Iyo uremye ideni ririmo ibicuruzwa, umubare wabyo uri mu bubiko ugabanuka mu buryo bwikora. Iyo wanditse ubwishyu, ububiko ntibuhinduka; hahinduka gusa amafaranga asigaye ku ideni.',
+
+help_debts_create_title: 'Kora ideni rishya',
+help_debts_create_body: 'Jya ku Madeni, ukande "Ongeraho Ideni". Hitamo umukiriya, ongeramo ibicuruzwa cyangwa amaserivisi, shyiraho ingano n’ibiciro, hanyuma ubike. Igiteranyo cy’ideni kibazwa mu buryo bwikora.',
+
+help_debts_items_title: 'Ongeraho ibicuruzwa cyangwa amaserivisi ku ideni',
+help_debts_items_body: 'Ushobora gushyira ibicuruzwa n’amaserivisi bitandukanye ku ideni rimwe. Hitamo ubwoko bw’ikintu, hitamo igicuruzwa cyangwa serivisi, shyiraho ingano n’igiciro. Igiteranyo kibazwa mu buryo bwikora.',
+
+help_debts_receipt_title: 'Capisha inyandiko y’ideni',
+help_debts_receipt_body: 'Nyuma yo kubika ideni, idirishya ryo gucapa rishobora gufunguka mu buryo bwikora niba gucapa byikora byemewe mu Igenamiterere. Ushobora kandi gucapa ideni nyuma ukoresheje ikimenyetso cya printer kiri ku ideni.',
+
+help_debts_delivery_title: 'Capisha inyandiko yo kohereza',
+help_debts_delivery_body: 'Kanda ku kimenyetso cy’ipaki kiri ku ideni kugira ngo ucape inyandiko yo kohereza ibicuruzwa. Iyi nyandiko igaragaza ibicuruzwa cyangwa ibice byoherejwe, ariko ntigaragaza ibiciro.',
+
+help_payments_record_title: 'Andika ubwishyu',
+help_payments_record_body: 'Jya ku ideni, ukande "Andika Ubwishyu". Shyiramo amafaranga yishyuwe, hitamo uburyo bw’ubwishyu, urugero amafaranga, Mobile Money, banki cyangwa ubundi buryo, hanyuma ubike. Amafaranga asigaye ku ideni ahita avugururwa.',
+
+help_payments_partial_title: 'Ubwishyu bw’igice',
+help_payments_partial_body: 'Ushobora kwandika ubwishyu bw’igice igihe umukiriya atarishyura ideni ryose. Imiterere y’ideni ihinduka ikava ku "Ritarishyurwa", ikajya ku "Rishyuwe igice", hanyuma ikajya ku "Rishyuwe" iyo amafaranga yose amaze kwishyurwa.',
+
+help_payments_receipt_title: 'Capisha inyemezabwishyu',
+help_payments_receipt_body: 'Nyuma yo kwandika ubwishyu, inyemezabwishyu ishobora gucapwa mu buryo bwikora niba ubwo buryo bwemewe mu Igenamiterere. Ushobora kandi kuyicapa nyuma uhereye ku ipaji y’Ubwishyu ukoresheje ikimenyetso cya printer.',
+
+help_proforma_create_title: 'Kora Proforma Invoice',
+help_proforma_create_body: 'Jya kuri Proforma Invoice, ukande "Inyandiko Nshya". Hitamo umukiriya cyangwa wandikemo amakuru ye, ongeramo ibicuruzwa cyangwa amaserivisi, hanyuma ushyireho ibisobanuro bikenewe. Proforma Invoice ni inyandiko yerekana ibyo umukiriya ashobora kugura n’ibiciro byabyo; ntabwo iba ideni kugeza igihe igikorwa cyemejwe.',
+
+help_proforma_items_title: 'Ongeraho ibicuruzwa cyangwa amaserivisi',
+help_proforma_items_body: 'Ongeramo ibicuruzwa cyangwa amaserivisi, shyiraho ingano n’ibiciro. Igiteranyo, imisoro, igabanyirizwa n’amafaranga yose yishyurwa bibazwa mu buryo bwikora.',
+
+help_proforma_discount_title: 'Shyiraho igabanyirizwa n’imisoro',
+help_proforma_discount_body: 'Ushobora gushyiraho igabanyirizwa ry’amafaranga cyangwa irishingiye ku ijanisha. Ushobora kandi gushyiraho imisoro no guhindura igipimo cyawo. Ibyo wahisemo bigaragara kuri Proforma Invoice icapwe.',
+
+help_proforma_pdf_title: 'Capisha cyangwa ubike nka PDF',
+help_proforma_pdf_body: 'Kanda "Capisha" kugira ngo ucape inyandiko, cyangwa ukande "Kura PDF" kugira ngo uyibike nka PDF. Inyandiko ishobora kuba irimo logo, amakuru y’ubucuruzi, amakuru y’umukiriya n’ibindi bisobanuro byashyizweho.',
+
+help_reports_types_title: 'Hitamo ubwoko bwa raporo',
+help_reports_types_body: 'Ipaji ya Raporo igufasha gukora raporo zitandukanye, zirimo raporo z’abakiriya, amadeni, amateka y’ubwishyu n’ububiko. Hitamo ubwoko bwa raporo ushaka kureba.',
+
+help_reports_export_title: 'Bika cyangwa capisha raporo',
+help_reports_export_body: 'Nyuma yo gukora raporo, ushobora kuyicapisha, kuyibika nka PDF cyangwa kuyohereza muri Excel. Ingano y’urupapuro, nka A4 cyangwa A5, ishobora guhindurwa mu Igenamiterere.',
+
+help_settings_business_title: 'Amakuru y’ubucuruzi',
+help_settings_business_body: 'Mu Igenamiterere > Ubucuruzi, shyiramo izina ry’ubucuruzi, logo, amakuru y’aho ubucuruzi bukorera, TIN, RSSB n’amakuru ya banki. Aya makuru akoreshwa ku nyandiko, inyemezabwishyu na raporo bikorerwa muri Ikaze Ledger.',
+
+help_settings_app_title: 'Igenamiterere rya porogaramu',
+help_settings_app_body: 'Mu Igenamiterere > Porogaramu, hitamo ururimi (Ikinyarwanda cyangwa English), isura (yera cyangwa yijimye), imiterere y’itariki, ingano y’impapuro n’izindi gahunda z’imikoreshereze. Ushobora kandi guhitamo page ifunguka nyuma yo kwinjira.',
+
+help_settings_receipt_title: 'Igenamiterere ry’inyandiko',
+help_settings_receipt_body: 'Mu Igenamiterere > Inyandiko, hitamo umutwe w’inyandiko, niba logo igomba kugaragara, umurongo w’umukono n’ikimenyetso cy’ubucuruzi. Ushobora kandi gushyiraho igipimo cy’imisoro kugira ngo ikoreshwe mu buryo bwikora ku nyandiko.',
+
+help_settings_security_title: 'Igenamiterere ry’umutekano',
+help_settings_security_body: 'Mu Igenamiterere > Umutekano, shyiraho PIN y’imibare 4–6 ishobora gukenerwa mbere y’ibikorwa by’ingenzi, nko gusiba cyangwa kugarura amakuru. Ushobora kandi gushyiraho igihe porogaramu imara idakoreshwa mbere yo kwifunga mu buryo bwikora.',
+
+help_settings_backup_title: 'Kubika no kugarura amakuru',
+help_settings_backup_body: 'Mu Igenamiterere > Kubika, ushobora gukora backup y’amakuru yawe, gushyiraho uburyo bwo kuyibika mu buryo bwikora no kugarura amakuru ukoresheje dosiye ya backup. Bika amakuru yawe buri gihe, cyane cyane mbere yo gukora impinduka zikomeye.',
+
+help_tips_offline_title: 'Koresha Ikaze Ledger nta internet',
+help_tips_offline_body: 'Ikaze Ledger ishobora gukora nta internet. Amakuru y’ubucuruzi abikwa kuri mudasobwa yawe, kandi ibikorwa by’ingenzi birakomeza gukora n’iyo internet idahari.',
+
+help_tips_backup_title: 'Bika amakuru buri gihe',
+help_tips_backup_body: 'Koresha uburyo bwo kubika amakuru mu Igenamiterere > Kubika, uhitemo aho backup igomba kubikwa. Kubika amakuru kenshi bigufasha kuyagarura mu gihe mudasobwa yangiritse, yatakaye cyangwa habaye ikindi kibazo.',
+
+help_tips_search_title: 'Koresha ubushakashatsi',
+help_tips_search_body: 'Buri page ifite ahantu ho gushakira amakuru. Koresha ubushakashatsi kugira ngo ubone vuba umukiriya, ideni, ubwishyu cyangwa igicuruzwa ukoresheje izina, telefone cyangwa andi makuru ajyanye na byo.',
+},
 };
+
