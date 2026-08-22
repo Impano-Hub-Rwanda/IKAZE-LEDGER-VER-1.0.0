@@ -2,10 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================================
+   IKAZE LEDGER
+   GLOBAL UI / MOTION SYSTEM
+   Lightweight • Offline-safe • Performance-friendly
+   ========================================================= */
+
+/* =========================================================
+   BASE
+   ========================================================= */
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
     font-size: 14px;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -14,9 +25,15 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+
+    /* Prevent accidental horizontal overflow */
+    overflow-x: hidden;
   }
 
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     @apply text-slate-800;
     letter-spacing: -0.015em;
   }
@@ -33,7 +50,10 @@
     @apply bg-slate-900 text-slate-300;
   }
 
-  .dark h1, .dark h2, .dark h3, .dark h4 {
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark h4 {
     @apply text-slate-100;
   }
 
@@ -44,56 +64,175 @@
   .dark * {
     @apply border-slate-700;
   }
+
+  /*
+   * Keep keyboard focus visible.
+   */
+  :focus-visible {
+    outline: 2px solid rgb(20 184 166 / 0.65);
+    outline-offset: 2px;
+  }
+
+  /*
+   * Cleaner desktop/mobile interaction.
+   */
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /*
+   * Prevent images from overflowing their containers.
+   */
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+  }
 }
 
+/* =========================================================
+   COMPONENTS
+   ========================================================= */
+
 @layer components {
+
+  /* -------------------------------------------------------
+     INPUTS
+     ------------------------------------------------------- */
+
   .input-base {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800
-    placeholder-slate-400 shadow-desk-sm transition-all
-    focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20
-    disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400;
+    @apply w-full rounded-lg border border-slate-300 bg-white
+    px-3.5 py-2.5 text-sm text-slate-800
+    placeholder-slate-400 shadow-desk-sm
+    transition-[border-color,box-shadow,background-color,color]
+    duration-150 ease-out
+    focus:border-teal-500 focus:outline-none
+    focus:ring-2 focus:ring-teal-500/20
+    disabled:cursor-not-allowed
+    disabled:bg-slate-50
+    disabled:text-slate-400;
+  }
+
+  .input-base:hover:not(:disabled) {
+    @apply border-slate-400;
   }
 
   .dark .input-base {
-    @apply border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500
-    focus:border-teal-400 focus:ring-teal-400/20;
+    @apply border-slate-600 bg-slate-800
+    text-slate-100 placeholder-slate-500
+    focus:border-teal-400
+    focus:ring-teal-400/20;
   }
 
+  .dark .input-base:hover:not(:disabled) {
+    @apply border-slate-500;
+  }
+
+  /* -------------------------------------------------------
+     BUTTONS
+     ------------------------------------------------------- */
+
   .btn-base {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold
-    transition-all duration-150 ease-desk
-    focus:outline-none focus:ring-2 focus:ring-offset-2
-    disabled:cursor-not-allowed disabled:opacity-60
+    @apply inline-flex items-center justify-center gap-2
+    rounded-lg px-4 py-2.5 text-sm font-semibold
+    transition-[background-color,border-color,color,box-shadow,transform]
+    duration-150 ease-out
+    focus:outline-none
+    focus:ring-2
+    focus:ring-offset-2
+    disabled:cursor-not-allowed
+    disabled:opacity-60
     active:scale-[0.98];
+  }
+
+  .btn-base:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .btn-base:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
   }
 
   .dark .btn-base {
     @apply focus:ring-offset-slate-900;
   }
 
+  /* -------------------------------------------------------
+     CARDS
+     ------------------------------------------------------- */
+
   .card-base {
-    @apply rounded-xl border border-slate-200 bg-white shadow-desk
-    dark:border-slate-700 dark:bg-slate-800;
+    @apply rounded-xl
+    border border-slate-200
+    bg-white
+    shadow-desk
+    dark:border-slate-700
+    dark:bg-slate-800
+    transition-[border-color,box-shadow,transform]
+    duration-150
+    ease-out;
   }
+
+  /*
+   * Add card-interactive only where hover effect is wanted.
+   */
+  .card-interactive:hover {
+    transform: translateY(-1px);
+    @apply shadow-md;
+  }
+
+  .dark .card-interactive:hover {
+    @apply shadow-lg;
+  }
+
+  /* -------------------------------------------------------
+     PANELS
+     ------------------------------------------------------- */
 
   .panel-base {
-    @apply rounded-xl border border-slate-200/70 bg-white shadow-panel
-    dark:border-slate-700/60 dark:bg-slate-800;
+    @apply rounded-xl
+    border border-slate-200/70
+    bg-white
+    shadow-panel
+    dark:border-slate-700/60
+    dark:bg-slate-800;
   }
+
+  /* -------------------------------------------------------
+     NAVIGATION
+     ------------------------------------------------------- */
 
   .nav-item-base {
-    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
-    transition-all duration-150 ease-desk;
+    @apply flex items-center gap-3
+    rounded-lg px-3 py-2.5
+    text-sm font-medium
+    transition-[background-color,color,border-color,transform]
+    duration-150 ease-out;
   }
 
-  /* Desktop-grade table styling */
+  .nav-item-base:hover {
+    transform: translateX(2px);
+  }
+
+  /* -------------------------------------------------------
+     TABLES
+     ------------------------------------------------------- */
+
   .table-base {
     @apply w-full text-left text-sm;
   }
 
   .table-base thead th {
-    @apply sticky top-0 z-10 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500
-    dark:bg-slate-900/40 dark:text-slate-400;
+    @apply sticky top-0 z-10
+    bg-slate-50
+    px-5 py-3
+    text-xs font-semibold
+    uppercase tracking-wide
+    text-slate-500
+    dark:bg-slate-900/40
+    dark:text-slate-400;
   }
 
   .dark .table-base thead th {
@@ -101,15 +240,42 @@
   }
 
   .table-base tbody tr {
-    @apply transition-colors duration-100 hover:bg-slate-50 dark:hover:bg-slate-700/40;
+    @apply transition-colors
+    duration-100
+    hover:bg-slate-50
+    dark:hover:bg-slate-700/40;
   }
 
   .table-base tbody td {
-    @apply px-5 py-3 text-slate-700 dark:text-slate-300;
+    @apply px-5 py-3
+    text-slate-700
+    dark:text-slate-300;
+  }
+
+  /* -------------------------------------------------------
+     SOFT INTERACTION
+     ------------------------------------------------------- */
+
+  .interactive-soft {
+    @apply transition-[background-color,border-color,color,box-shadow,transform]
+    duration-150 ease-out;
+  }
+
+  .interactive-soft:hover {
+    transform: translateY(-1px);
   }
 }
 
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+
 @layer utilities {
+
+  /* -------------------------------------------------------
+     SCROLLBAR
+     ------------------------------------------------------- */
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
@@ -126,7 +292,11 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply rounded-full border-2 border-solid border-transparent bg-slate-300 bg-clip-content;
+    @apply rounded-full
+    border-2 border-solid
+    border-transparent
+    bg-slate-300
+    bg-clip-content;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
@@ -141,57 +311,247 @@
     @apply bg-slate-500 bg-clip-content;
   }
 
+  /* -------------------------------------------------------
+     PAGE
+     ------------------------------------------------------- */
+
   .animate-page-in {
-    animation: page-in 0.3s ease-desk both;
+    animation: page-in 220ms ease-out both;
   }
+
+  /* -------------------------------------------------------
+     MODAL
+     ------------------------------------------------------- */
 
   .animate-modal-in {
-    animation: modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: modal-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+
+  /* -------------------------------------------------------
+     OVERLAY
+     ------------------------------------------------------- */
 
   .animate-overlay-in {
-    animation: overlay-in 0.2s ease-out both;
+    animation: overlay-in 140ms ease-out both;
   }
+
+  /* -------------------------------------------------------
+     ROW
+     ------------------------------------------------------- */
 
   .animate-row-in {
-    animation: row-in 0.35s ease-out both;
+    animation: row-in 220ms ease-out both;
   }
 
+  /* -------------------------------------------------------
+     FADE
+     ------------------------------------------------------- */
+
   .animate-fade-in {
-    animation: fade-in 0.25s ease-out both;
+    animation: fade-in 180ms ease-out both;
   }
 
   .animate-fade-up {
-    animation: fade-up 0.4s ease both;
+    animation: fade-up 220ms ease-out both;
+  }
+
+  /* -------------------------------------------------------
+     SCALE
+     ------------------------------------------------------- */
+
+  .animate-scale-in {
+    animation: scale-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* -------------------------------------------------------
+     DROPDOWN
+     ------------------------------------------------------- */
+
+  .animate-dropdown-in {
+    animation: dropdown-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* -------------------------------------------------------
+     TOAST
+     ------------------------------------------------------- */
+
+  .animate-toast-in {
+    animation: toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* -------------------------------------------------------
+     SKELETON
+     ------------------------------------------------------- */
+
+  .animate-pulse-soft {
+    animation: pulse-soft 1.6s ease-in-out infinite;
+  }
+}
+
+/* =========================================================
+   KEYFRAMES
+   ========================================================= */
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
-@keyframes page-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-@keyframes modal-in {
-  from { opacity: 0; transform: translateY(16px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
-@keyframes overlay-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
-@keyframes row-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================
+   TOUCH / MOBILE
+   ========================================================= */
+
+@media (hover: none) {
+  .btn-base:hover:not(:disabled),
+  .card-interactive:hover,
+  .nav-item-base:hover,
+  .interactive-soft:hover {
+    transform: none;
+  }
+}
+
+/* =========================================================
+   OPTIONAL PERFORMANCE HELPERS
+   ========================================================= */
+
+/*
+ * Use only on large containers that actually need isolation.
+ * Do not apply globally.
+ */
+
+.motion-safe {
+  will-change: auto;
+}
+
+.motion-active {
+  will-change: transform, opacity;
 }
