@@ -73,7 +73,7 @@
       "endpoints": [
         "https://github.com/Impano-Hub-Rwanda/IKAZE-LEDGER-VER-1.0.0/releases/latest/download/latest.json"
       ],
-      "pubkey": "RWRWbu/xvL5cW859k3tfjrzRGy7+2H5qREnqetlR1zI0pmG6iVHu3GuL",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2RDBGNkFEQzA4QjRCQjkKUldTNVM0dkFyZmJRMXVkRkcwV0pBQk1WeThBajg1VUI3VGk5bGU0OHlXeU9xSTVHYzFMcFUzUmsK",
       "windows": {"installMode": "passive"}
     }
   }
