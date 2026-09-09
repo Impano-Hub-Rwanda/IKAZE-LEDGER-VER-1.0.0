@@ -28,13 +28,6 @@ jobs:
           Set-Content $path $s -NoNewline
           if ($s -notmatch "const APP_VERSION = '1\.0\.9';") { throw "SettingsPage version patch failed" }
           if ($s -match 'handleInstallUpdate|downloadAndInstallUpdate') { throw "Redundant manual updater handler remains" }
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/features/settings/pages/SettingsPage.tsx
-          if (-not (git diff --cached --quiet)) {
-            git commit -m "fix: finalize updater UI for 1.0.9"
-            git push origin HEAD:release
-          }
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
