@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Ikaze Ledger",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "identifier": "com.mud.debtagent",
   "build": {
     "frontendDist": "../dist",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Ikaze Ledger — smart business management system",
+        "title": "Ikaze Ledger — Debt Management System",
         "width": 1280,
         "height": 800,
         "minWidth": 900,
@@ -37,13 +37,15 @@
       "id": "main-tray",
       "iconPath": "icons/icon.png",
       "iconAsTemplate": false,
-      "tooltip": "Ikaze Ledger — smart business Management system.",
+      "tooltip": "Ikaze Ledger — Debt Management System",
       "menuOnLeftClick": false
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -54,12 +56,14 @@
     "externalBin": [],
     "copyright": "© 2026 MUD — Marcel UWIMANA. All rights reserved.",
     "category": "Finance",
-    "shortDescription": "IKAZE Ledger — Igisubizo cyuzuye mu micungire y’ubucuruzi",
-    "longDescription": "IKAZE Ledger ni porogaramu ikora idakeneye internet (offline-first), igenewe gufasha ubucuruzi bito n’ubuciriritse gucunga amadeni n’abakiriya. Igufasha gukurikirana imyenda y’abakiriya, ubwishyu, ububiko bw’ibicuruzwa, ndetse no gukora raporo z’umwuga, inyemezabwishyu (receipts),delivery note, proforma invoices n'ibindi. IKAZE Ledger ikora neza n’iyo nta internet ihari. Yakozwe na MUD SOFTWARE COMPANY...",
+    "shortDescription": "Offline-first debt & customer management for small businesses",
+    "longDescription": "Ikaze Ledger is an offline-first debt and customer management application for small and medium businesses. Track customer debts, payments, inventory, and generate professional reports, receipts, and proforma invoices. Works fully offline. Powered by MUD.",
     "windows": {
       "nsis": {
         "installMode": "perMachine",
-        "languages": ["English"],
+        "languages": [
+          "English"
+        ],
         "displayLanguageSelector": false,
         "installerIcon": "icons/icon.ico",
         "headerImage": "installer/header.bmp",
@@ -71,13 +75,16 @@
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
       }
-    }
+    },
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "updater": {
-      "active": false,
-      "endpoints": ["https://updates.mud.rw/dms/{{target}}/{{arch}}/{{current_version}}"],
-      "pubkey": "",
+      "active": true,
+      "endpoints": [
+        "https://github.com/Impano-Hub-Rwanda/IKAZE-LEDGER-VER-1.0.0/releases/latest/download/latest.json"
+      ],
+      "pubkey": "RWRWbu/xvL5cW859k3tfjrzRGy7+2H5qREnqetlR1zI0pmG6iVHu3GuL",
       "windows": {
         "installMode": "passive"
       }

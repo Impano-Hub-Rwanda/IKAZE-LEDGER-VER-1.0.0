@@ -1,10 +1,10 @@
 [package]
 name = "Ikaze-Ledger"
-version = "1.0.0"
+version = "1.0.8"
 description = "Professional debt management for small businesses"
 authors = ["Marcel UWIMANA"]
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.77.2"
 
 [lib]
 name = "dms_lib"
@@ -20,7 +20,7 @@ tauri-plugin-updater = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-store = "2"
-tauri-plugin-notification = "2"
+tauri-plugin-notification = "2.3.3"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-os = "2"
 tauri-plugin-process = "2"

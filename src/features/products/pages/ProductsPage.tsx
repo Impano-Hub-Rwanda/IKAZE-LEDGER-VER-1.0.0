@@ -92,7 +92,7 @@ export function ProductsPage({ embedded = false }: { embedded?: boolean }) {
       )}
       {embedded && (
         <div className="flex justify-end">
-          <Button onClick={openAdd} size="lg" className="shrink-0">
+          <Button variant="blue" onClick={openAdd} size="lg" className="shrink-0">
             <span className="flex items-center gap-2"><PackagePlus className="h-5 w-5" /> {t.products.add}</span>
           </Button>
         </div>

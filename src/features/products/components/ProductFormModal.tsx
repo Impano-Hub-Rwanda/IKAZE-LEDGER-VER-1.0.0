@@ -151,7 +151,7 @@ export function ProductFormModal({
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* ── Basic Info ── */}
         <div>
-          <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">Basic Information</h4>
+          <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">{t.ui.basicInformation}</h4>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label={t.products.name}
@@ -170,7 +170,7 @@ export function ProductFormModal({
             />
           </div>
           <div className="mt-4">
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">Description (Optional)</label>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">{t.products.descriptionOptional}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -183,10 +183,10 @@ export function ProductFormModal({
 
         {/* ── Classification ── */}
         <div>
-          <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">Classification</h4>
+          <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">{t.ui.classification}</h4>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">Unit</label>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">{t.ui.unit}</label>
               <input
                 type="text"
                 list="unit-options"
@@ -238,7 +238,7 @@ export function ProductFormModal({
 
         {/* ── Pricing & Stock ── */}
         <div>
-          <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">Pricing &amp; Stock</h4>
+          <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">{t.ui.pricingStock}</h4>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Input
               label={t.products.buyingPrice}

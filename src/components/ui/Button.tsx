@@ -1,6 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'success' | 'ghost';
+type Variant = 'primary' | 'blue' | 'indigo' | 'violet' | 'cyan' | 'amber' | 'secondary' | 'danger' | 'success' | 'ghost';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,6 +12,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variantClasses: Record<Variant, string> = {
   primary:
     'bg-teal-600 text-white hover:bg-teal-700 focus:ring-teal-500 active:bg-teal-800 shadow-desk-sm',
+  blue:
+    'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 active:bg-blue-800 shadow-desk-sm',
+  indigo:
+    'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 active:bg-indigo-800 shadow-desk-sm',
+  violet:
+    'bg-violet-600 text-white hover:bg-violet-700 focus:ring-violet-500 active:bg-violet-800 shadow-desk-sm',
+  cyan:
+    'bg-cyan-600 text-white hover:bg-cyan-700 focus:ring-cyan-500 active:bg-cyan-800 shadow-desk-sm',
+  amber:
+    'bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-500 active:bg-amber-800 shadow-desk-sm',
   secondary:
     'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400 focus:ring-teal-500 shadow-desk-sm dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-700',
   danger:

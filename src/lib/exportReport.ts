@@ -31,6 +31,11 @@ export interface BusinessInfo {
   showOwnerOnReceipts: boolean;
 }
 
+function getReportLanguageLabels() {
+  const rw = typeof localStorage !== 'undefined' && localStorage.getItem('dms-language') === 'rw';
+  return rw ? { confidential: 'Inyandiko y’Ubucuruzi y’Ibanga', powered: 'Byakozwe na MUD Software Company' } : { confidential: 'Confidential Business Document', powered: 'Powered by MUD Software Company' };
+}
+
 export async function getBusinessInfo(): Promise<BusinessInfo> {
   if (businessInfoCache) return businessInfoCache;
   const db = getDb();
@@ -70,6 +75,7 @@ export interface AppSettings {
   reportPaperSize: 'a4' | 'a5';
   autoPrintDebt: boolean;
   autoPrintPayment: boolean;
+  autoPrintConfigured: boolean;
   startupPage: string;
   autoSave: boolean;
   receiptHeader: string | null;
@@ -96,7 +102,7 @@ export async function getAppSettings(): Promise<AppSettings> {
   const res = await db.query<AppSettings>(
     `SELECT language, theme, date_format AS "dateFormat", receipt_width AS "receiptWidth",
             report_paper_size AS "reportPaperSize", auto_print_debt AS "autoPrintDebt",
-            auto_print_payment AS "autoPrintPayment", startup_page AS "startupPage",
+            auto_print_payment AS "autoPrintPayment", auto_print_configured AS "autoPrintConfigured", startup_page AS "startupPage",
             auto_save AS "autoSave", receipt_header AS "receiptHeader",
             receipt_show_logo AS "receiptShowLogo", receipt_show_signature AS "receiptShowSignature",
             receipt_show_watermark AS "receiptShowWatermark", report_header AS "reportHeader",
@@ -113,7 +119,7 @@ export async function getAppSettings(): Promise<AppSettings> {
   return {
     language: 'en', theme: 'dark', dateFormat: 'DD/MM/YYYY',
     receiptWidth: '80mm', reportPaperSize: 'a4',
-    autoPrintDebt: true, autoPrintPayment: true,
+    autoPrintDebt: false, autoPrintPayment: false, autoPrintConfigured: true,
     startupPage: 'dashboard', autoSave: true,
     receiptHeader: null, receiptShowLogo: true, receiptShowSignature: false, receiptShowWatermark: false,
     reportHeader: null, reportFooter: null, defaultReport: 'customers',
@@ -151,14 +157,15 @@ export interface PdfExportOptions {
   showWatermark?: boolean;
   customHeader?: string;
   customFooter?: string;
+  customerInfo?: { name: string; phone?: string; address?: string };
 }
 
 /* ─────────────────────────────────────────────
    A4 / A5 dimensions in mm
    ───────────────────────────────────────────── */
 const PAGE_DIMS = {
-  a4: { w: 210, h: 297, margin: 14, padTop: 12, padBottom: 20 },
-  a5: { w: 148, h: 210, margin: 10, padTop: 10, padBottom: 16 },
+  a4: { w: 210, h: 297, margin: 14, padTop: 12, padBottom: 24 },
+  a5: { w: 148, h: 210, margin: 10, padTop: 10, padBottom: 20 },
 };
 
 async function drawHeader(
@@ -294,18 +301,18 @@ function drawSummaryBoxes(
   const availableW = pw - 2 * m;
   // Fewer, wider cards give long currency values more room to breathe —
   // avoids needing to shrink text as aggressively as a 4-up grid did.
-  const cols = paperSize === 'a4' ? 3 : 2;
-  const gap = 4;
+  const cols = paperSize === 'a4' ? 4 : 3;
+  const gap = 3;
   const cardW = (availableW - gap * (cols - 1)) / cols;
-  const cardH = 16;
-  const maxTextW = cardW - 7;
+  const cardH = paperSize === 'a4' ? 10 : 9;
+  const maxTextW = cardW - 6;
 
   // Compute ONE shared font size for all labels, and ONE shared size for
   // all values — using the smallest size any individual card actually
   // needs. Sizing each card independently made cards in the same row show
   // different text sizes next to each other, which looked inconsistent.
   doc.setFont('helvetica', 'normal');
-  let labelSize = 8;
+  let labelSize = 6;
   for (const s of summary) {
     doc.setFontSize(labelSize);
     while (labelSize > 6 && doc.getTextWidth(s.label) > maxTextW) {
@@ -314,10 +321,10 @@ function drawSummaryBoxes(
     }
   }
   doc.setFont('helvetica', 'bold');
-  let valueSize = paperSize === 'a4' ? 12 : 11;
+  let valueSize = paperSize === 'a4' ? 8.5 : 8;
   for (const s of summary) {
     doc.setFontSize(valueSize);
-    while (valueSize > 9 && doc.getTextWidth(s.value) > maxTextW) {
+    while (valueSize > 8 && doc.getTextWidth(s.value) > maxTextW) {
       valueSize -= 1;
       doc.setFontSize(valueSize);
     }
@@ -330,23 +337,23 @@ function drawSummaryBoxes(
     const cy = y + row * (cardH + 3);
 
     doc.setFillColor(239, 246, 255);
-    doc.roundedRect(x, cy, cardW, cardH, 2, 2, 'F');
+    doc.roundedRect(x, cy, cardW, cardH, 1.5, 1.5, 'F');
     doc.setDrawColor(37, 99, 235);
     doc.setLineWidth(0.3);
-    doc.roundedRect(x, cy, cardW, cardH, 2, 2, 'S');
+    doc.roundedRect(x, cy, cardW, cardH, 1.5, 1.5, 'S');
     // Amber accent stripe on the left edge of each card
     doc.setFillColor(245, 158, 11);
-    doc.roundedRect(x, cy, 2.2, cardH, 1, 1, 'F');
+    doc.roundedRect(x, cy, 1.8, cardH, 0.8, 0.8, 'F');
     doc.setLineWidth(0.2);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(labelSize);
     doc.setTextColor(71, 85, 105);
-    doc.text(summary[i].label, x + 5, cy + 5);
+    doc.text(summary[i].label, x + 4, cy + 4.5);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(valueSize);
     doc.setTextColor(30, 64, 175);
-    doc.text(summary[i].value, x + 5, cy + 13);
+    doc.text(summary[i].value, x + 4, cy + cardH - 2.5);
     doc.setTextColor(0, 0, 0);
   }
 
@@ -411,6 +418,29 @@ export async function exportReportToPdf(opts: PdfExportOptions, info: BusinessIn
   doc.setTextColor(100, 100, 100);
   doc.text(opts.dateGenerated, m, y);
   y += 6;
+
+  if (opts.customerInfo?.name) {
+    doc.setFillColor(240, 253, 250);
+    doc.setDrawColor(13, 148, 136);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(m, y, pw - 2 * m, 10, 1.5, 1.5, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 118, 110);
+    doc.text('Customer:', m + 4, y + 4);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(17, 24, 39);
+    doc.text(opts.customerInfo.name, m + 27, y + 4);
+    const extra = [opts.customerInfo.phone, opts.customerInfo.address].filter(Boolean).join(' | ');
+    if (extra) {
+      doc.setFontSize(7);
+      doc.setTextColor(71, 85, 105);
+      doc.text(extra, m + 27, y + 7.5);
+    }
+    doc.setTextColor(0, 0, 0);
+    y += 13;
+  }
 
   // Summary boxes
   if (opts.summary && opts.summary.length) {
@@ -490,7 +520,7 @@ export async function exportReportToPdf(opts: PdfExportOptions, info: BusinessIn
       doc.setLineWidth(0.2);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setTextColor(71, 85, 105);
       doc.text(`${section.totalLabel}:`, boxX + 5, y + 1);
       doc.setFont('helvetica', 'bold');
@@ -585,6 +615,7 @@ export interface PrintOptions {
   summary?: { label: string; value: string }[];
   customHeader?: string;
   customFooter?: string;
+  customerInfo?: { name: string; phone?: string; address?: string };
 }
 
 function escapeHtml(s: string): string {
@@ -604,9 +635,10 @@ export function buildReportHtml(opts: PrintOptions): string {
   // per-page footer (border + 3 lines of text) PLUS a safety gap, so the
   // browser's automatic page pagination never lets a table row render into
   // the same space the footer occupies on every page.
-  const padBottom = isA5 ? '28mm' : '34mm';
+  const padBottom = isA5 ? '22mm' : '24mm';
 
-  const logoHtml = opts.logoData ? `<img src="${opts.logoData}" class="ph-logo" alt="logo" />` : '';
+  const reportLabels = getReportLanguageLabels();
+  const logoHtml = `<img src="${opts.logoData || '/icon.png'}" class="ph-logo" alt="Ikaze Ledger" />`;
 
   const bizLines: string[] = [];
   if (info) {
@@ -662,10 +694,10 @@ export function buildReportHtml(opts: PrintOptions): string {
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(opts.title)}</title>
   <style>
-    @page{margin:${padTop} ${padSide} ${padBottom} ${padSide};size:${isA5 ? 'A5' : 'A4'}}
+    @page{margin:${padTop} ${padSide} ${padBottom} ${padSide};size:${isA5 ? 'A5' : 'A4'} portrait}
     *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#111;background:#fff;position:relative}
-    .page{width:100%;min-height:${isA5 ? '172mm' : '251mm'};position:relative;page-break-after:always}
+    .page{width:100%;min-height:${isA5 ? '178mm' : '261mm'};position:relative;page-break-after:always;padding-bottom:4mm}
     .page:last-child{page-break-after:auto}
     .watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:${isA5 ? '50px' : '72px'};font-weight:bold;color:#000;opacity:0.06;white-space:nowrap;pointer-events:none;z-index:0;letter-spacing:2px}
     .content{position:relative;z-index:1}
@@ -684,19 +716,24 @@ export function buildReportHtml(opts: PrintOptions): string {
     .rpt-title{text-align:center;font-size:${isA5 ? '17px' : '21px'};font-weight:bold;color:#0f766e;margin:4mm 0 2mm;letter-spacing:0.5px}
     .rpt-subtitle{text-align:center;font-size:11px;color:#475569;margin-bottom:3mm}
     .rpt-meta{font-size:11px;color:#666;margin-bottom:4mm;padding:0 2px}
+    .customer-strip{display:flex;align-items:center;gap:8px;border:1px solid #0d9488;border-radius:4px;background:#f0fdfa;padding:4px 7px;margin:4px 0 6px;font-size:9px;color:#111}
+    .customer-strip strong{color:#0f766e}.customer-strip small{color:#475569}
 
     /* Summary cards */
-    .summary{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
-    .sum-card{flex:1;min-width:${isA5 ? '110px' : '150px'};border:1px solid #2563eb;border-left:3px solid #f59e0b;border-radius:5px;padding:7px 10px;background:#eff6ff}
-    .sum-label{display:block;font-size:8px;color:#475569;text-transform:uppercase;letter-spacing:0.5px}
-    .sum-val{display:block;font-size:${isA5 ? '13px' : '15px'};font-weight:bold;color:#1e40af;margin-top:2px;word-break:break-word}
+    .summary{display:flex;flex-wrap:wrap;gap:3px;margin:3px 0 5px}
+    .sum-card{flex:1;min-width:${isA5 ? '82px' : '102px'};border:1px solid #2563eb;border-left:2px solid #f59e0b;border-radius:4px;padding:3px 5px;background:#eff6ff}
+    .sum-label{display:block;font-size:6.5px;color:#475569;text-transform:uppercase;letter-spacing:0.25px}
+    .sum-val{display:block;font-size:${isA5 ? '8px' : '9px'};font-weight:bold;color:#1e40af;margin-top:1px;word-break:break-word}
 
     /* Sections */
-    .section{margin-bottom:12px}
+    .section{margin-bottom:12px;break-inside:auto}
     .section-title{font-size:${isA5 ? '12px' : '14px'};font-weight:bold;color:#0f766e;margin-bottom:4px;padding-bottom:2px;border-bottom:1px solid #d1d5db}
 
     /* Table */
     table.rpt-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:${isA5 ? '9px' : '10px'}}
+    table.rpt-table{page-break-inside:auto;break-inside:auto}
+    table.rpt-table thead{display:table-header-group}
+    table.rpt-table tbody{display:table-row-group}
     table.rpt-table th{border:1px solid #2563eb;padding:5px 5px;font-weight:bold;background:#dbeafe;color:#1e40af;letter-spacing:0.3px;word-wrap:break-word;overflow-wrap:break-word}
     table.rpt-table th.l{text-align:left}
     table.rpt-table th.c{text-align:center}
@@ -704,7 +741,7 @@ export function buildReportHtml(opts: PrintOptions): string {
     table.rpt-table td{border:1px solid #bbb;padding:4px 5px;text-align:left;word-wrap:break-word;overflow-wrap:break-word}
     table.rpt-table td.c{text-align:center}
     table.rpt-table td.r{text-align:right}
-    table.rpt-table tr{page-break-inside:avoid;break-inside:avoid}
+    table.rpt-table tr{page-break-inside:avoid;break-inside:avoid}table.rpt-table td,table.rpt-table th{position:relative}
     table.rpt-table tr:nth-child(even){background:#f8fafc}
     table.rpt-table td.empty{color:#999;text-align:center;padding:12px;font-style:italic}
 
@@ -719,13 +756,13 @@ export function buildReportHtml(opts: PrintOptions): string {
     .prepared-by{font-size:10px;color:#475569;margin-top:6px}
 
     /* Footer */
-    .pf-wrap{position:fixed;bottom:${isA5 ? '3mm' : '4mm'};left:${padSide};right:${padSide};z-index:2}
+    .pf-wrap{position:fixed;left:${padSide};right:${padSide};bottom:3mm;margin:0;z-index:999;background:#fff;page-break-inside:avoid;break-inside:avoid;width:auto;height:${isA5 ? '14mm' : '15mm'};overflow:hidden}
     .pf-inner{border-top:1px solid #2563eb;padding-top:3px;background:#fff}
     .pf-contact{text-align:center;font-size:8px;color:#475569;margin-bottom:2px}
     .pf-meta{display:flex;justify-content:space-between;font-size:7px;color:#666}
     .pf-powered{text-align:center;font-size:8px;font-weight:bold;color:#1e40af;margin-top:2px}
 
-    @media print{body{background:#fff}.page{margin:0}.watermark{position:fixed}}
+    @media print{html,body{background:#fff!important;color:#111!important;color-scheme:light!important}.page{margin:0;min-height:0;padding-bottom:4mm}.pf-wrap{position:fixed!important;left:${padSide}!important;right:${padSide}!important;bottom:3mm!important;margin:0!important;background:#fff!important;z-index:999!important;page-break-inside:avoid;break-inside:avoid}.watermark{position:fixed!important}}
   </style></head><body>
   ${watermarkHtml}
   <div class="page">
@@ -745,6 +782,7 @@ export function buildReportHtml(opts: PrintOptions): string {
       <div class="rpt-meta">
         <span>${escapeHtml(opts.dateGenerated)}</span>
       </div>
+      ${opts.customerInfo?.name ? `<div class="customer-strip"><strong>Customer:</strong><span>${escapeHtml(opts.customerInfo.name)}</span>${opts.customerInfo.phone ? `<small>${escapeHtml(opts.customerInfo.phone)}</small>` : ''}${opts.customerInfo.address ? `<small>${escapeHtml(opts.customerInfo.address)}</small>` : ''}</div>` : ''}
 
       ${summaryHtml}
 
@@ -755,11 +793,11 @@ export function buildReportHtml(opts: PrintOptions): string {
     <div class="pf-wrap"><div class="pf-inner">
       <div class="pf-contact">${contactLine}</div>
       <div class="pf-meta">
-        <span>Confidential Business Document</span>
+        <span>${reportLabels.confidential}</span>
         <span>${printDate} ${printTime}</span>
         <span>Page 1 of 1</span>
       </div>
-      <div class="pf-powered">Powered by MUD Software Company</div>
+      <div class="pf-powered">${reportLabels.powered}</div>
       ${opts.customFooter ? `<div style="text-align:center;font-size:7px;font-style:italic;color:#999;margin-top:2px">${escapeHtml(opts.customFooter)}</div>` : ''}
     </div></div>
   </div>

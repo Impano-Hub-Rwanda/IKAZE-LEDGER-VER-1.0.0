@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../../i18n';
 import { getDb } from '../../../lib/database';
-import { Spinner } from '../../../components/ui/Spinner';
+import { PageSkeleton } from '../../../components/ui/Skeleton';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { EmptyState, IconButton } from '../../../components/ui/Primitives';
@@ -104,11 +104,7 @@ export function InventoryPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <PageSkeleton columns={5} />;
   }
 
   return (
@@ -297,7 +293,7 @@ function CurrentStockView({
               </div>
             </div>
             <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3 dark:border-slate-700">
-              <Button size="sm" variant="success" onClick={() => onStockIn(p)} className="flex-1">
+              <Button size="sm" variant="cyan" onClick={() => onStockIn(p)} className="flex-1">
                 <span className="flex items-center justify-center gap-1.5">
                   <ArrowDownCircle className="h-4 w-4" /> {t.inventory.stockIn}
                 </span>

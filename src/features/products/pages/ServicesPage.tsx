@@ -87,7 +87,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       )}
       {embedded && (
         <div className="flex justify-end">
-          <Button onClick={openAdd} size="lg" className="shrink-0">
+          <Button variant="indigo" onClick={openAdd} size="lg" className="shrink-0">
             <span className="flex items-center gap-2"><PlusCircle className="h-5 w-5" /> {t.services.add}</span>
           </Button>
         </div>

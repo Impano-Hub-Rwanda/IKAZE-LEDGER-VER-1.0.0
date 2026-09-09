@@ -19,8 +19,19 @@ import {
   printDebtReceipt, printPaymentReceipt, printDeliveryNote,
   type PrintFormat,
 } from '../../../lib/printReceipt';
-import { getAppSettings } from '../../../lib/exportReport';
 import type { Debt, DebtStatus, DebtItem } from '../../../types/debt';
+
+
+async function readAutoPrintSetting(kind: 'debt' | 'payment'): Promise<boolean> {
+  try {
+    const db = getDb();
+    const column = kind === 'debt' ? 'auto_print_debt' : 'auto_print_payment';
+    const res = await db.query<{ enabled: boolean }>(`SELECT ${column} AS enabled FROM settings WHERE id = 1`);
+    return Boolean((res.rows as { enabled: boolean }[])[0]?.enabled);
+  } catch {
+    return false;
+  }
+}
 
 interface DebtWithCustomer extends Debt {
   customer_name: string;
@@ -84,7 +95,26 @@ export function DebtsPage() {
   const openDetails = useCallback(async (d: DebtWithCustomer) => {
     try {
       const db = getDb();
-      const res = await db.query<DebtItem>('SELECT * FROM debt_items WHERE debt_id = $1 ORDER BY id', [d.id]);
+      const res = await db.query<DebtItem>(
+        `SELECT di.id, di.debt_id, di.product_id, di.service_id, di.item_type,
+                COALESCE(
+                  NULLIF(TRIM(di.product_name), ''),
+                  NULLIF(TRIM(p.name), ''),
+                  NULLIF(TRIM(s.name), ''),
+                  CASE
+                    WHEN di.item_type = 'service' AND di.service_id IS NOT NULL THEN CONCAT('Service #', di.service_id)
+                    WHEN di.product_id IS NOT NULL THEN CONCAT('Product #', di.product_id)
+                    ELSE 'Item'
+                  END
+                ) AS product_name,
+                di.quantity, di.unit_price, di.subtotal
+         FROM debt_items di
+         LEFT JOIN products p ON p.id = di.product_id
+         LEFT JOIN services s ON s.id = di.service_id
+         WHERE di.debt_id = $1
+         ORDER BY di.id`,
+        [d.id],
+      );
       setSelected({ ...d, items: res.rows as DebtItem[] });
     } catch { setSelected(d); }
     setDetailsOpen(true);
@@ -115,8 +145,8 @@ export function DebtsPage() {
     async (paymentId: number) => {
       setPayOpen(false);
       void load(true);
-      const settings = await getAppSettings();
-      if (!settings.autoPrintPayment) return;
+      if (!(await readAutoPrintSetting('payment'))) return;
+      await new Promise((resolve) => setTimeout(resolve, 120));
       const labels: Record<string, string> = {
         cash: t.payments.methodCash,
         mobile_money: t.payments.methodMobile,
@@ -245,16 +275,16 @@ export function DebtsPage() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3 dark:border-slate-700">
                     <Button size="sm" variant="success" onClick={() => openPay(d)} className="flex-1">
-                      <span className="flex items-center justify-center gap-1.5"><Banknote className="h-4 w-4" /> Pay</span>
+                      <span className="flex items-center justify-center gap-1.5"><Banknote className="h-4 w-4" /> {t.ui.pay}</span>
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => openDetails(d)} className="flex-1">
-                      <span className="flex items-center justify-center gap-1.5"><Eye className="h-4 w-4" /> Details</span>
+                      <span className="flex items-center justify-center gap-1.5"><Eye className="h-4 w-4" /> {t.ui.details}</span>
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => openPrintDialog(d)} className="flex-1">
-                      <span className="flex items-center justify-center gap-1.5"><Printer className="h-4 w-4" /> Print</span>
+                      <span className="flex items-center justify-center gap-1.5"><Printer className="h-4 w-4" /> {t.ui.print}</span>
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => handlePrintDeliveryNote(d)} className="flex-1">
-                      <span className="flex items-center justify-center gap-1.5"><Package className="h-4 w-4" /> Delivery</span>
+                      <span className="flex items-center justify-center gap-1.5"><Package className="h-4 w-4" /> {t.ui.deliveryNote}</span>
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => openEdit(d)} className="flex-1">
                       <span className="flex items-center justify-center gap-1.5"><Pencil className="h-4 w-4" /></span>
@@ -311,9 +341,9 @@ export function DebtsPage() {
             Show Company Watermark
           </label>
           <div className="flex gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setPrintDialogDebt(null)} fullWidth>Cancel</Button>
+            <Button variant="secondary" onClick={() => setPrintDialogDebt(null)} fullWidth>{t.common.cancel}</Button>
             <Button onClick={handlePrintConfirm} fullWidth>
-              <span className="flex items-center justify-center gap-1.5"><Printer className="h-4 w-4" /> Print</span>
+              <span className="flex items-center justify-center gap-1.5"><Printer className="h-4 w-4" /> {t.ui.print}</span>
             </Button>
           </div>
         </div>
@@ -327,8 +357,8 @@ export function DebtsPage() {
           void load(true);
           if (newDebtId) {
             void (async () => {
-              const settings = await getAppSettings();
-              if (!settings.autoPrintDebt) return;
+              if (!(await readAutoPrintSetting('debt'))) return;
+              await new Promise((resolve) => setTimeout(resolve, 120));
               const data = await loadDebtReceiptData(newDebtId, user?.full_name ?? '—');
               if (data) printDebtReceipt(data);
             })();

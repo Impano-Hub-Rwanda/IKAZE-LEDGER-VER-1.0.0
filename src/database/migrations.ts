@@ -130,8 +130,13 @@ export const SCHEMA_STATEMENTS: string[] = [
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS date_format TEXT NOT NULL DEFAULT 'DD/MM/YYYY'`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_width TEXT NOT NULL DEFAULT '80mm'`,
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS report_paper_size TEXT NOT NULL DEFAULT 'a4'`,
-  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_print_debt BOOLEAN NOT NULL DEFAULT TRUE`,
-  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_print_payment BOOLEAN NOT NULL DEFAULT TRUE`,
+  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_print_debt BOOLEAN NOT NULL DEFAULT FALSE`,
+  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_print_payment BOOLEAN NOT NULL DEFAULT FALSE`,
+  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_print_configured BOOLEAN NOT NULL DEFAULT FALSE`,
+  // Existing installations used auto-print by default. Convert that legacy default
+  // to opt-in exactly once, then mark the setting as configured.
+  `UPDATE settings SET auto_print_debt=FALSE, auto_print_payment=FALSE WHERE auto_print_configured=FALSE`,
+  `UPDATE settings SET auto_print_configured=TRUE WHERE auto_print_configured=FALSE`,
 
   // Expanded settings columns (v1.0 production)
   `ALTER TABLE settings ADD COLUMN IF NOT EXISTS logo_data TEXT`,
@@ -197,11 +202,16 @@ export const SCHEMA_STATEMENTS: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_payments_debt_id ON payments(debt_id)`,
   `CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_payments_paid_at ON payments(paid_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_payments_debt_paid_at ON payments(debt_id, paid_at)`,
   `CREATE INDEX IF NOT EXISTS idx_inventory_movements_product_id ON inventory_movements(product_id)`,
   `CREATE INDEX IF NOT EXISTS idx_inventory_movements_created_at ON inventory_movements(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_customers_created_at ON customers(created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_customers_full_name ON customers(full_name)`,
   `CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)`,
+  `CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_products_stock_quantity ON products(stock_quantity)`,
+  `CREATE INDEX IF NOT EXISTS idx_debts_created_at ON debts(created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_debts_customer_created_at ON debts(customer_id, created_at)`,
 
   // ── Pro Forma Invoices ──
   `CREATE TABLE IF NOT EXISTS proforma_invoices (
@@ -250,13 +260,50 @@ export const SCHEMA_STATEMENTS: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_proforma_items_service_id ON proforma_items(service_id)`,
   `CREATE INDEX IF NOT EXISTS idx_proforma_items_item_type ON proforma_items(item_type)`,
 
+  `CREATE INDEX IF NOT EXISTS idx_proforma_created_at ON proforma_invoices(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_proforma_customer_id ON proforma_invoices(customer_id)`,
   `CREATE INDEX IF NOT EXISTS idx_proforma_status ON proforma_invoices(status)`,
   `CREATE INDEX IF NOT EXISTS idx_proforma_items_proforma_id ON proforma_items(proforma_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_proforma_items_product_id ON proforma_items(product_id)`,
+
+  // ── Demand Letters ──
+  `CREATE TABLE IF NOT EXISTS demand_letters (
+    id              SERIAL PRIMARY KEY,
+    reference       TEXT NOT NULL UNIQUE,
+    customer_id     INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+    customer_name   TEXT,
+    letter_date     DATE NOT NULL DEFAULT CURRENT_DATE,
+    deadline        DATE,
+    subject         TEXT NOT NULL DEFAULT '',
+    body_html       TEXT NOT NULL DEFAULT '',
+    closing         TEXT NOT NULL DEFAULT '',
+    show_debt_table BOOLEAN NOT NULL DEFAULT TRUE,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_demand_letters_customer_id ON demand_letters(customer_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_demand_letters_user_id ON demand_letters(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_demand_letters_updated_at ON demand_letters(updated_at)`,
+  `ALTER TABLE demand_letters ADD COLUMN IF NOT EXISTS admin_name TEXT NOT NULL DEFAULT ''`,
 ];
 
+const SCHEMA_VERSION = 4;
+
 export async function runMigrations(db: PGlite): Promise<void> {
+  // Avoid re-running the entire schema (dozens of CREATE/ALTER/INDEX queries)
+  // on every application start. Migrations are still fully executed on a fresh
+  // database or after a schema version change.
+  await db.query(`CREATE TABLE IF NOT EXISTS ikaze_schema_meta (version INTEGER NOT NULL)`);
+  const current = await db.query<{ version: number | string }>(
+    `SELECT version FROM ikaze_schema_meta ORDER BY version DESC LIMIT 1`,
+  );
+  if (Number(current.rows[0]?.version) === SCHEMA_VERSION) return;
+
   for (const stmt of SCHEMA_STATEMENTS) {
     await db.query(stmt);
   }
+
+  await db.query(`DELETE FROM ikaze_schema_meta`);
+  await db.query(`INSERT INTO ikaze_schema_meta (version) VALUES ($1)`, [SCHEMA_VERSION]);
 }

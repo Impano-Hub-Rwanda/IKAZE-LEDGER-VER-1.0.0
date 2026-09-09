@@ -9,7 +9,7 @@
  *   if the write is interrupted.
  */
 
-import { getStore, setStore, isTauri, writeFile, createDir, fileExists } from './tauri';
+import { getStore, setStore, isTauri, writeFile, createDir, fileExists, renameFile } from './tauri';
 import { exportDatabaseSnapshot } from './backupManager';
 
 const STORE_KEY_AUTOBACKUP = 'dms-autobackup';
@@ -92,7 +92,7 @@ export async function performAutoBackupIfNeeded(): Promise<boolean> {
 
   try {
     const snapshot = await exportDatabaseSnapshot();
-    const json = JSON.stringify(snapshot, null, 2);
+    const json = JSON.stringify(snapshot);
 
     // Ensure folder exists
     await createDir(config.folderPath);
@@ -141,14 +141,12 @@ async function rotateBackups(folderPath: string, maxBackups: number): Promise<vo
     const rollingPath = `${folderPath}/dms-auto-backup.json`;
 
     if (await fileExists(rollingPath)) {
-      // Read the rolling backup and write a timestamped copy
+      // Rename instead of reading and rewriting the entire backup.
       try {
-        const { readFile } = await import('./tauri');
-        const data = await readFile(rollingPath);
-        await writeFile(historicalPath, data);
+        await renameFile(rollingPath, historicalPath);
         manifest.push(historicalPath);
       } catch {
-        // If copy fails, skip rotation — the rolling file is still valid
+        // If rename fails, skip rotation — the rolling file is still valid.
       }
     }
 

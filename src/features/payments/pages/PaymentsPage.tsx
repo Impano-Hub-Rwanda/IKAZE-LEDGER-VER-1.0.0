@@ -3,7 +3,7 @@ import { Plus, Eye, Banknote, Printer } from 'lucide-react';
 import { useLanguage } from '../../../i18n';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getDb } from '../../../lib/database';
-import { Spinner } from '../../../components/ui/Spinner';
+import { PageSkeleton } from '../../../components/ui/Skeleton';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { Modal } from '../../../components/ui/Modal';
@@ -13,8 +13,19 @@ import { formatDate } from '../../../utils/formatDate';
 import { PaymentFormModal } from '../components/PaymentFormModal';
 import { PaymentDetailsModal } from '../components/PaymentDetailsModal';
 import { loadPaymentReceiptData, printPaymentReceipt, type PrintFormat } from '../../../lib/printReceipt';
-import { getAppSettings } from '../../../lib/exportReport';
 import type { Payment, PaymentMethod } from '../../../types';
+
+
+async function readAutoPrintSetting(kind: 'debt' | 'payment'): Promise<boolean> {
+  try {
+    const db = getDb();
+    const column = kind === 'debt' ? 'auto_print_debt' : 'auto_print_payment';
+    const res = await db.query<{ enabled: boolean }>(`SELECT ${column} AS enabled FROM settings WHERE id = 1`);
+    return Boolean((res.rows as { enabled: boolean }[])[0]?.enabled);
+  } catch {
+    return false;
+  }
+}
 
 interface PaymentRow extends Payment {
   customer_name: string;
@@ -123,11 +134,7 @@ export function PaymentsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <PageSkeleton columns={5} />;
   }
 
   return (
@@ -289,8 +296,10 @@ export function PaymentsPage() {
           setFormOpen(false);
           void load(true);
           void (async () => {
-            const settings = await getAppSettings();
-            if (settings.autoPrintPayment) void printReceipt(paymentId);
+            if (await readAutoPrintSetting('payment')) {
+              await new Promise((resolve) => setTimeout(resolve, 120));
+              void printReceipt(paymentId);
+            }
           })();
         }}
       />
@@ -335,9 +344,9 @@ export function PaymentsPage() {
             Show Company Watermark
           </label>
           <div className="flex gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setPrintDialogPayment(null)} fullWidth>Cancel</Button>
+            <Button variant="secondary" onClick={() => setPrintDialogPayment(null)} fullWidth>{t.common.cancel}</Button>
             <Button onClick={handlePrintConfirm} fullWidth>
-              <span className="flex items-center justify-center gap-1.5"><Printer className="h-4 w-4" /> Print</span>
+              <span className="flex items-center justify-center gap-1.5"><Printer className="h-4 w-4" /> {t.ui.print}</span>
             </Button>
           </div>
         </div>

@@ -15,22 +15,31 @@ export async function applyStockChange(params: {
   /** Signed change: positive for in, negative for out. */
   quantityChange: number;
   reason: string;
+  /** When false, the caller owns the surrounding transaction. */
+  manageTransaction?: boolean;
 }): Promise<void> {
   const db = getDb();
-  const { productId, userId, movementType, quantityChange, reason } = params;
-  await db.query('BEGIN');
+  const { productId, userId, movementType, quantityChange, reason, manageTransaction = true } = params;
+  if (!Number.isInteger(productId) || productId <= 0) throw new Error('Invalid product id');
+  if (!Number.isInteger(quantityChange) || quantityChange === 0) throw new Error('Invalid stock change');
+  if (!reason.trim()) throw new Error('Stock movement reason is required');
+  if (manageTransaction) await db.query('BEGIN');
   try {
-    await db.query(
-      'UPDATE products SET stock_quantity = stock_quantity + $1, updated_at = now() WHERE id = $2',
+    const updated = await db.query<{ id: number }>(
+      `UPDATE products
+       SET stock_quantity = stock_quantity + $1, updated_at = now()
+       WHERE id = $2 AND stock_quantity + $1 >= 0
+       RETURNING id`,
       [quantityChange, productId],
     );
+    if (!(updated.rows as { id: number }[])[0]) throw new Error('Insufficient stock or product not found');
     await db.query(
       'INSERT INTO inventory_movements (product_id, user_id, movement_type, quantity_change, reason) VALUES ($1, $2, $3, $4, $5)',
       [productId, userId, movementType, quantityChange, reason],
     );
-    await db.query('COMMIT');
+    if (manageTransaction) await db.query('COMMIT');
   } catch (err) {
-    await db.query('ROLLBACK');
+    if (manageTransaction) await db.query('ROLLBACK');
     throw err;
   }
 }

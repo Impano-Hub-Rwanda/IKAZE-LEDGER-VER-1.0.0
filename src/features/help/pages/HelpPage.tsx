@@ -118,6 +118,18 @@ const SECTIONS: HelpSection[] = [
     ],
   },
   {
+    id: 'demand-letter',
+    icon: FileText,
+    titleKey: 'demandLetter',
+    contentKey: 'help_demand_letter',
+    steps: [
+      { titleKey: 'help_demand_letter_prepare_title', bodyKey: 'help_demand_letter_prepare_body' },
+      { titleKey: 'help_demand_letter_customer_title', bodyKey: 'help_demand_letter_customer_body' },
+      { titleKey: 'help_demand_letter_format_title', bodyKey: 'help_demand_letter_format_body' },
+      { titleKey: 'help_demand_letter_pdf_title', bodyKey: 'help_demand_letter_pdf_body' },
+    ],
+  },
+  {
     id: 'tips',
     icon: HelpCircle,
     titleKey: 'help_general_tips',

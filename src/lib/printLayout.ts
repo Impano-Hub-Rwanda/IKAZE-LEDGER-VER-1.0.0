@@ -18,8 +18,8 @@ export interface PrintHeaderOptions {
 
 export function buildPrintHeader(opts: PrintHeaderOptions): string {
   const { businessInfo: b, showLogo = true } = opts;
-  const logo = showLogo && b.logoData
-    ? `<img src="${b.logoData}" class="ph-logo" alt="logo" />`
+  const logo = showLogo
+    ? `<img src="${b.logoData || '/icon.png'}" class="ph-logo" alt="Ikaze Ledger" />`
     : '';
 
   const bizLines: string[] = [];
@@ -77,9 +77,9 @@ export function buildPrintFooter(opts: PrintFooterOptions): string {
     <div class="pf-inner">
       <div class="pf-contact">${addrParts.join(' &nbsp;|&nbsp; ')}</div>
       <div class="pf-meta">
-        <span>${opts.confidentialLabel}</span>
+        <span>${esc(opts.confidentialLabel)}</span>
         <span>${esc(printDate)} ${esc(printTime)}</span>
-        <span>${opts.pageLabel}</span>
+        ${opts.pageLabel ? `<span>${esc(opts.pageLabel)}</span>` : ''}
         <span>${esc(opts.poweredBy)}</span>
       </div>
     </div>
@@ -87,10 +87,10 @@ export function buildPrintFooter(opts: PrintFooterOptions): string {
 }
 
 export const PRINT_BASE_STYLES = `
-  @page { margin: 12mm 14mm 20mm 14mm; size: A4; }
+  @page { margin: 12mm 14mm 20mm 14mm; size: A4 portrait; }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #111; background: #fff; }
-  .page { width: 100%; min-height: 265mm; position: relative; page-break-after: always; }
+  .page { width: 100%; min-height: 265mm; position: relative; page-break-after: always; padding-bottom: 18mm; }
   .page:last-child { page-break-after: auto; }
 
   /* ── Professional Print Header ── */
@@ -114,7 +114,7 @@ export const PRINT_BASE_STYLES = `
   .report-meta .prepared { display: block; margin-bottom: 1px; }
 
   /* ── Professional Print Footer ── */
-  .pf-wrap { position: absolute; bottom: 6mm; left: 14mm; right: 14mm; }
+  .pf-wrap { position: fixed; bottom: 3mm; left: 14mm; right: 14mm; background: #fff; z-index: 999; page-break-inside: avoid; break-inside: avoid; }
   .pf-inner { border-top: 1px solid ${BRAND_TEAL}; padding-top: 4px; }
   .pf-contact { text-align: center; font-size: 8px; color: ${BRAND_SLATE}; margin-bottom: 3px; }
   .pf-meta { display: flex; justify-content: space-between; font-size: 7px; color: #999; }
@@ -129,7 +129,7 @@ export const PRINT_BASE_STYLES = `
   .doc-table td.r { text-align: right; }
   .doc-table tr:nth-child(even) td { background: #f8fafc; }
 
-  @media print { body { background: #fff; } .page { margin: 0; } }
+  @media print { html, body { width: 100%; background: #fff; } .page { margin: 0; break-after: page; } .page:last-child { break-after: auto; } }
 `;
 
 /**

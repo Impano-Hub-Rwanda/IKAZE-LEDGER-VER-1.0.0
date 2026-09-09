@@ -158,10 +158,10 @@ export function CommandPalette({ open, onClose, onNewCustomer, onNewProduct, onN
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-slate-200 px-4 py-2 dark:border-slate-700">
             <div className="flex items-center gap-3 text-[11px] text-slate-400">
-              <span className="flex items-center gap-1"><ArrowUp className="h-3 w-3" /><ArrowDown className="h-3 w-3" /> Navigate</span>
-              <span className="flex items-center gap-1"><CornerDownLeft className="h-3 w-3" /> Select</span>
+              <span className="flex items-center gap-1"><ArrowUp className="h-3 w-3" /><ArrowDown className="h-3 w-3" />{t.ui.navigate}</span>
+              <span className="flex items-center gap-1"><CornerDownLeft className="h-3 w-3" />{t.ui.select}</span>
             </div>
-            <span className="text-[11px] font-medium text-slate-400">Powered by MUD</span>
+            <span className="text-[11px] font-medium text-slate-400">{t.ui.poweredByMudShort}</span>
           </div>
         </div>
       </div>

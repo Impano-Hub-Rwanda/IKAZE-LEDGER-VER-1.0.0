@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 
@@ -51,7 +52,7 @@ export function Modal({ open, onClose, title, children, className = '', size = '
 
   if (!mounted) return null;
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div
         className={`absolute inset-0 bg-slate-900/50 transition-opacity duration-200 animate-overlay-in ${
@@ -62,7 +63,7 @@ export function Modal({ open, onClose, title, children, className = '', size = '
       />
       <div
         className={`relative z-10 flex max-h-[90vh] w-full ${sizeClasses[size]} flex-col overflow-hidden rounded-2xl bg-white shadow-desk-xl ring-1 ring-slate-900/5 transition-all duration-200 ease-desk dark:bg-slate-800 dark:ring-white/5 ${
-          visible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-95 opacity-0'
+          visible ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0'
         } ${className}`}
         role="dialog"
         aria-modal="true"
@@ -82,4 +83,7 @@ export function Modal({ open, onClose, title, children, className = '', size = '
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
+

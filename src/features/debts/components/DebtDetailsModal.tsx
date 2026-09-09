@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import { User, Calendar, Shield, FileText, Package, Wrench, TrendingUp, Wallet } from 'lucide-react';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { useLanguage } from '../../../i18n';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { formatDate } from '../../../utils/formatDate';
+import { getDb } from '../../../lib/database';
 import type { Debt, DebtStatus, DebtItem } from '../../../types/debt';
 
 interface DebtDetailsModalProps {
@@ -14,6 +16,42 @@ interface DebtDetailsModalProps {
 
 export function DebtDetailsModal({ open, onClose, debt }: DebtDetailsModalProps) {
   const { t } = useLanguage();
+  const [items, setItems] = useState<DebtItem[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !debt) return;
+    let cancelled = false;
+    setItemsLoading(true);
+    void (async () => {
+      try {
+        const db = getDb();
+        const res = await db.query<DebtItem>(
+          `SELECT di.id, di.debt_id, di.product_id, di.service_id,
+                  COALESCE(di.item_type, CASE WHEN di.service_id IS NOT NULL THEN 'service' ELSE 'product' END) AS item_type,
+                  COALESCE(NULLIF(TRIM(di.product_name), ''), NULLIF(TRIM(p.name), ''), NULLIF(TRIM(s.name), ''),
+                    CASE WHEN di.service_id IS NOT NULL THEN CONCAT('Service #', di.service_id)
+                         WHEN di.product_id IS NOT NULL THEN CONCAT('Product #', di.product_id)
+                         ELSE 'Item' END) AS product_name,
+                  di.quantity, di.unit_price,
+                  COALESCE(di.subtotal, di.quantity * di.unit_price) AS subtotal
+           FROM debt_items di
+           LEFT JOIN products p ON p.id = di.product_id
+           LEFT JOIN services s ON s.id = di.service_id
+           WHERE di.debt_id = $1
+           ORDER BY di.id`,
+          [debt.id],
+        );
+        if (!cancelled) setItems(res.rows as DebtItem[]);
+      } catch {
+        if (!cancelled) setItems(debt.items ?? []);
+      } finally {
+        if (!cancelled) setItemsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, debt?.id]);
+
   if (!debt) return null;
 
   const remaining = Number(debt.total_amount) - Number(debt.paid_amount);
@@ -63,9 +101,11 @@ export function DebtDetailsModal({ open, onClose, debt }: DebtDetailsModalProps)
           <div className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300">
             {t.debts.items}
           </div>
-          {debt.items && debt.items.length > 0 ? (
+          {itemsLoading ? (
+            <div className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">Loading…</div>
+          ) : items.length > 0 ? (
             <div className="divide-y divide-slate-100 dark:divide-slate-700">
-              {debt.items.map((item: DebtItem, idx: number) => {
+              {items.map((item: DebtItem, idx: number) => {
                 const isService = item.item_type === 'service';
                 return (
                 <div key={item.id} className="flex items-center justify-between gap-3 px-4 py-3">

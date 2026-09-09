@@ -29,6 +29,7 @@ interface AuthContextValue {
   hasPin: () => Promise<boolean>;
   resetActivityTimer: () => void;
   clearLockTimeout: () => void;
+  lock: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -326,6 +327,12 @@ export function AuthProvider({ dbReady, children }: { dbReady: boolean; children
     return { ok: false, error: 'Invalid PIN or password' };
   }, [user, verifyPin, resetActivityTimer, updateLockState]);
 
+  const lock = useCallback(() => {
+    if (!session) return;
+    clearLockTimeout();
+    updateLockState(true);
+  }, [session, clearLockTimeout, updateLockState]);
+
   const logout = useCallback(() => {
     clearLockTimeout();
     setUserState(null);
@@ -356,8 +363,9 @@ export function AuthProvider({ dbReady, children }: { dbReady: boolean; children
       hasPin,
       resetActivityTimer,
       clearLockTimeout,
+      lock,
     }),
-    [session, user, loading, needsSetup, dbReady, locked, login, logout, refreshSetupFlag, setUser, unlock, verifyPin, hasPin, resetActivityTimer, clearLockTimeout],
+    [session, user, loading, needsSetup, dbReady, locked, login, logout, refreshSetupFlag, setUser, unlock, verifyPin, hasPin, resetActivityTimer, clearLockTimeout, lock],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

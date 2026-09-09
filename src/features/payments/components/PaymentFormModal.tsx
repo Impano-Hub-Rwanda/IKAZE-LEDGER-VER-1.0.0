@@ -34,7 +34,8 @@ export function PaymentFormModal({ open, onClose, onSaved, presetDebt }: Payment
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [note, setNote] = useState('');
-  const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const [paidAt, setPaidAt] = useState(today());
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -45,7 +46,7 @@ export function PaymentFormModal({ open, onClose, onSaved, presetDebt }: Payment
     setMethod('cash');
     setNote('');
     setFormError('');
-    setPaidAt(new Date().toISOString().slice(0, 10));
+    setPaidAt(today());
     if (presetDebt) {
       setDebtId(String(presetDebt.id));
     } else {
@@ -99,19 +100,34 @@ export function PaymentFormModal({ open, onClose, onSaved, presetDebt }: Payment
     setLoading(true);
     try {
       const db = getDb();
-      const newPaid = Number(targetDebt.paid_amount) + amountNum;
-      const newStatus = newPaid >= Number(targetDebt.total_amount) - 0.01 ? 'paid' : 'partially_paid';
-      const payRes = await db.query<{ id: number }>(
-        'INSERT INTO payments (debt_id, user_id, amount, method, note, paid_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-        [targetDebt.id, user?.id ?? 0, amountNum, method, note.trim() || null, paidAt],
-      );
-      const paymentId = (payRes.rows as { id: number }[])[0].id;
-      await db.query(
-        'UPDATE debts SET paid_amount = $1, status = $2, updated_at = now() WHERE id = $3',
-        [newPaid, newStatus, targetDebt.id],
-      );
-      onSaved(paymentId);
-      handleClose();
+      await db.query('BEGIN');
+      try {
+        const payRes = await db.query<{ id: number }>(
+          'INSERT INTO payments (debt_id, user_id, amount, method, note, paid_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+          [targetDebt.id, user?.id ?? 0, amountNum, method, note.trim() || null, paidAt],
+        );
+        const paymentId = (payRes.rows as { id: number }[])[0].id;
+        const updated = await db.query<{ id: number }>(
+          `UPDATE debts
+           SET paid_amount = paid_amount + $1,
+               status = CASE
+                 WHEN paid_amount + $1 >= total_amount - 0.01 THEN 'paid'
+                 WHEN paid_amount + $1 > 0 THEN 'partially_paid'
+                 ELSE 'pending'
+               END,
+               updated_at = now()
+           WHERE id = $2 AND paid_amount + $1 <= total_amount + 0.01
+           RETURNING id`,
+          [amountNum, targetDebt.id],
+        );
+        if (!(updated.rows as { id: number }[])[0]) throw new Error('Payment exceeds the current balance');
+        await db.query('COMMIT');
+        onSaved(paymentId);
+        handleClose();
+      } catch (err) {
+        await db.query('ROLLBACK');
+        throw err;
+      }
     } catch {
       setFormError(t.payments.errorSaving);
     } finally {

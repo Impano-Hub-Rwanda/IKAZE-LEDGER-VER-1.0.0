@@ -108,6 +108,12 @@ export async function readFile(path: string): Promise<string> {
   return fs.readTextFile(path);
 }
 
+export async function renameFile(from: string, to: string): Promise<void> {
+  const fs = await safeImport(() => import('@tauri-apps/plugin-fs'));
+  if (!fs) throw new Error('File system not available in browser mode');
+  await fs.rename(from, to);
+}
+
 export async function fileExists(path: string): Promise<boolean> {
   const fs = await safeImport(() => import('@tauri-apps/plugin-fs'));
   if (!fs) return false;
@@ -192,29 +198,64 @@ export async function restartApp(): Promise<void> {
 }
 
 // ── Updater ──────────────────────────────────────────────────
-export async function checkForUpdates(): Promise<{ available: boolean; version?: string; body?: string } | null> {
+export interface UpdateCheckResult {
+  available: boolean;
+  version?: string;
+  body?: string;
+  installed?: boolean;
+  error?: string;
+}
+
+/**
+ * Checks for a signed update. When one exists, it is downloaded and
+ * installed immediately so the Settings button is a single-step action.
+ * The updater itself verifies the signed artifact before installation.
+ */
+export async function checkForUpdates(): Promise<UpdateCheckResult | null> {
   const updater = await safeImport(() => import('@tauri-apps/plugin-updater'));
   if (!updater) return null;
+
   try {
     const update = await updater.check();
-    if (update) {
-      return { available: true, version: update.version, body: update.body };
-    }
-    return { available: false };
-  } catch {
-    return null;
+    if (!update) return { available: false };
+
+    const result: UpdateCheckResult = {
+      available: true,
+      version: update.version,
+      body: update.body,
+      installed: false,
+    };
+
+    // One click = check + download + install.
+    // Tauri's updater verifies the configured public key before install.
+    await update.downloadAndInstall();
+    result.installed = true;
+
+    // Windows exits as part of the updater installer flow. On Linux/macOS
+    // the newly installed bundle must be relaunched explicitly.
+    const proc = await safeImport(() => import('@tauri-apps/plugin-process'));
+    await proc?.relaunch();
+
+    return result;
+  } catch (err) {
+    return {
+      available: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
+/** Backward-compatible explicit installer entry point. */
 export async function downloadAndInstallUpdate(): Promise<void> {
   const updater = await safeImport(() => import('@tauri-apps/plugin-updater'));
   if (!updater) return;
+
   const update = await updater.check();
-  if (update) {
-    await update.downloadAndInstall();
-    const proc = await import('@tauri-apps/plugin-process');
-    await proc.relaunch();
-  }
+  if (!update) return;
+
+  await update.downloadAndInstall();
+  const proc = await safeImport(() => import('@tauri-apps/plugin-process'));
+  await proc?.relaunch();
 }
 
 // ── Shell ────────────────────────────────────────────────────
@@ -227,38 +268,175 @@ export async function openExternal(url: string): Promise<void> {
   await shell.open(url);
 }
 
-// ── Print via hidden iframe (works in Tauri webview) ───────
+// ── Print HTML in the current Tauri webview ─────────────────
+// Tauri/WebView can fail to print iframe.contentWindow (upstream issue),
+// so printing is performed from the main window with the application UI
+// temporarily hidden in print media.
+let isPrintingHtml = false;
+
 export function printHtmlDocument(html: string): void {
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  document.body.appendChild(iframe);
+  if (isPrintingHtml) return;
+
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const thermalMatch = (parsed.head?.textContent || '').match(/@page\s*\{[^}]*size:\s*(58mm|80mm)/i);
+  const thermalWidth = thermalMatch?.[1] || null;
+  const printRoot = document.createElement('div');
+  printRoot.id = '__ikaze_print_root__';
+  printRoot.setAttribute('aria-hidden', 'true');
+  printRoot.innerHTML = parsed.body?.innerHTML || html;
+
+  const printStyles = document.createElement('style');
+  printStyles.id = '__ikaze_print_styles__';
+  printStyles.textContent = `
+    /* Keep the application's theme completely outside the print document. */
+    #__ikaze_print_root__,
+    #__ikaze_print_root__ * {
+      color-scheme: light !important;
+    }
+
+    #__ikaze_print_root__ {
+      display: block !important;
+      background: #fff !important;
+      color: #000 !important;
+      box-sizing: border-box !important;
+    }
+
+    @media screen {
+      #__ikaze_print_root__ {
+        display: none !important;
+      }
+    }
+
+    @media print {
+      html,
+      body {
+        background: #fff !important;
+        color: #000 !important;
+        color-scheme: light !important;
+      }
+
+      body > *:not(#__ikaze_print_root__) {
+        display: none !important;
+      }
+
+      body > #__ikaze_print_root__ {
+        display: block !important;
+        width: ${thermalWidth ? thermalWidth : 'auto'} !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        background: #fff !important;
+        color: #000 !important;
+        box-sizing: border-box !important;
+      }
+
+      #__ikaze_print_root__,
+      #__ikaze_print_root__ * {
+        color-scheme: light !important;
+      }
+    }
+  `;
+
+  // Copy the generated document's <style> elements into the real document
+  // so @page rules and the document's own print layout CSS are honored.
+  const generatedStyles = Array.from(parsed.head?.querySelectorAll('style') || []);
+  const clonedStyles = generatedStyles.map((style) => {
+    const clone = document.createElement('style');
+    // The generated HTML normally styles `body`. Because the print payload is
+    // mounted inside the application's body, scope those body selectors to
+    // the isolated print root so receipt/A4/A5 dimensions remain identical
+    // to the standalone HTML document. @page rules are intentionally kept.
+    const css = style.textContent || '';
+    clone.textContent = css.replace(/\bbody\b/g, '#__ikaze_print_root__');
+    clone.setAttribute('data-ikaze-print-style', 'true');
+    return clone;
+  });
+
+  const originalTitle = document.title;
+  const previousPrintStyles = document.getElementById('__ikaze_print_styles__');
+  const previousPrintRoot = document.getElementById('__ikaze_print_root__');
+
+  // The application uses Tailwind's `.dark` selectors. Those selectors have
+  // enough specificity to affect a print root inserted into the main DOM.
+  // Temporarily remove only the theme marker while printing. This keeps the
+  // actual printed document independent of Light/Dark Mode, including in the
+  // Tauri desktop WebView. The original state is restored after printing.
+  const themeNodes = [document.documentElement, document.body];
+  const darkClassState = themeNodes.map((node) => ({
+    node,
+    hadDark: node.classList.contains('dark'),
+  }));
+  const previousColorScheme = document.documentElement.style.colorScheme;
+  const previousBodyColorScheme = document.body.style.colorScheme;
+
+  isPrintingHtml = true;
+  document.title = parsed.title || originalTitle;
+
+  themeNodes.forEach((node) => node.classList.remove('dark'));
+  document.documentElement.style.colorScheme = 'light';
+  document.body.style.colorScheme = 'light';
+
+  document.body.appendChild(printRoot);
+  document.head.appendChild(printStyles);
+  clonedStyles.forEach((style) => document.head.appendChild(style));
+
+  let cleaned = false;
+  let fallbackTimer: number | undefined;
 
   const cleanup = () => {
-    setTimeout(() => {
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-    }, 1000);
+    if (cleaned) return;
+    cleaned = true;
+
+    window.removeEventListener('afterprint', cleanup);
+    if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
+
+    printRoot.remove();
+    printStyles.remove();
+    clonedStyles.forEach((style) => style.remove());
+
+    previousPrintStyles?.remove();
+    previousPrintRoot?.remove();
+
+    darkClassState.forEach(({ node, hadDark }) => {
+      node.classList.toggle('dark', hadDark);
+    });
+
+    document.documentElement.style.colorScheme = previousColorScheme;
+    document.body.style.colorScheme = previousBodyColorScheme;
+    document.title = originalTitle;
+    isPrintingHtml = false;
   };
 
-  const doc = iframe.contentWindow?.document;
-  if (!doc) { cleanup(); return; }
+  window.addEventListener('afterprint', cleanup, { once: true });
 
-  doc.open();
-  doc.write(html);
-  doc.close();
+  // Wait for data-URL images, fonts and two layout frames before opening the
+  // native printer. This is important for the Tauri desktop WebView.
+  const waitForAssets = async () => {
+    const images = Array.from(printRoot.querySelectorAll('img'));
+    await Promise.all(images.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.addEventListener('load', () => resolve(), { once: true });
+        img.addEventListener('error', () => resolve(), { once: true });
+      });
+    }));
 
-  iframe.onload = () => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } finally {
-      cleanup();
+    if ('fonts' in document && document.fonts?.ready) {
+      await document.fonts.ready;
     }
+
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+
+    window.focus();
+    window.print();
+
+    // Some WebViews do not emit afterprint consistently. Keep a fallback so
+    // the application always returns to its original theme/state.
+    fallbackTimer = window.setTimeout(cleanup, 60000);
   };
+
+  void waitForAssets();
 }
 
 export { isTauri };

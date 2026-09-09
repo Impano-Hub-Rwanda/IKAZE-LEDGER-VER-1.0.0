@@ -1,0 +1,611 @@
+[1mdiff --git a/src/components/layout/AuthLayout.tsx b/src/components/layout/AuthLayout.tsx[m
+[1mindex 9440461..ea49c0e 100644[m
+[1m--- a/src/components/layout/AuthLayout.tsx[m
+[1m+++ b/src/components/layout/AuthLayout.tsx[m
+[36m@@ -1,522 +1,116 @@[m
+ import type { ReactNode } from 'react';[m
+[31m-import { Minus, X } from 'lucide-react';[m
+[31m-import { getCurrentWindow } from '@tauri-apps/api/window';[m
+[32m+[m[32mimport { useLanguage } from '../../i18n';[m
+[32m+[m[32mimport { useEffect, useState } from 'react';[m
+[32m+[m[32mimport { Minus, Square, X, Copy } from 'lucide-react';[m
+[32m+[m[32mimport { minimizeWindow, toggleMaximizeWindow, closeWindow, startDragging, isTauri } from '../../lib/tauri';[m
+ [m
+ interface AuthLayoutProps {[m
+   children: ReactNode;[m
+   title: string;[m
+   subtitle?: string;[m
+[32m+[m[32m  clientCount?: number;[m
+ }[m
+ [m
+[31m-export function AuthLayout({[m
+[31m-  children,[m
+[31m-  title,[m
+[31m-  subtitle,[m
+[31m-}: AuthLayoutProps) {[m
+[31m-  const handleMinimize = async () => {[m
+[31m-    try {[m
+[31m-      const window = getCurrentWindow();[m
+[31m-      await window.minimize();[m
+[31m-    } catch (error) {[m
+[31m-      console.error('Failed to minimize window:', error);[m
+[31m-    }[m
+[31m-  };[m
+[32m+[m[32mexport function AuthLayout({ children, title, subtitle, clientCount }: AuthLayoutProps) {[m
+[32m+[m[32m  const { t } = useLanguage();[m
+[32m+[m[32m  const [desktop, setDesktop] = useState(false);[m
+[32m+[m[32m  const [maximized, setMaximized] = useState(false);[m
+ [m
+[31m-  const handleClose = async () => {[m
+[31m-    try {[m
+[31m-      const window = getCurrentWindow();[m
+[31m-      await window.close();[m
+[31m-    } catch (error) {[m
+[31m-      console.error('Failed to close window:', error);[m
+[31m-    }[m
+[31m-  };[m
+[32m+[m[32m  useEffect(() => { setDesktop(isTauri()); }, []);[m
+ [m
+   return ([m
+[31m-    <div[m
+[31m-      className="[m
+[31m-        relative[m
+[31m-        min-h-screen[m
+[31m-        w-full[m
+[31m-        overflow-hidden[m
+[31m-        bg-[#EAF4F8][m
+[31m-      "[m
+[31m-    >[m
+[31m-[m
+[31m-      {/* =====================================================[m
+[31m-          BACKGROUND GLOW[m
+[31m-         ===================================================== */}[m
+[31m-[m
+[31m-      <div[m
+[31m-        className="[m
+[31m-          pointer-events-none[m
+[31m-          absolute[m
+[31m-          -left-40[m
+[31m-          -top-40[m
+[31m-          h-[420px][m
+[31m-          w-[420px][m
+[31m-          rounded-full[m
+[31m-          bg-[#008CFF][m
+[31m-          opacity-[0.06][m
+[31m-          blur-3xl[m
+[31m-        "[m
+[31m-      />[m
+[31m-[m
+[31m-      <div[m
+[31m-        className="[m
+[31m-          pointer-events-none[m
+[31m-          absolute[m
+[31m-          -bottom-40[m
+[31m-          -right-40[m
+[31m-          h-[420px][m
+[31m-          w-[420px][m
+[31m-          rounded-full[m
+[31m-          bg-[#20D878][m
+[31m-          opacity-[0.06][m
+[31m-          blur-3xl[m
+[31m-        "[m
+[31m-      />[m
+[31m-[m
+[31m-      {/* =====================================================[m
+[31m-          WINDOW CONTROLS[m
+[31m-         ===================================================== */}[m
+[31m-[m
+[31m-      <div[m
+[31m-        className="[m
+[31m-          fixed[m
+[31m-          right-3[m
+[31m-          top-3[m
+[31m-          z-[100][m
+[31m-          flex[m
+[31m-          items-center[m
+[31m-          gap-1[m
+[31m-        "[m
+[31m-      >[m
+[31m-        {/* MINIMIZE */}[m
+[31m-        <button[m
+[31m-          type="button"[m
+[31m-          onClick={handleMinimize}[m
+[31m-          aria-label="Minimize window"[m
+[31m-          title="Minimize"[m
+[31m-          className="[m
+[31m-            flex[m
+[31m-            h-9[m
+[31m-            w-10[m
+[31m-            items-center[m
+[31m-            justify-center[m
+[31m-            rounded-lg[m
+[31m-            text-slate-500[m
+[31m-            transition-all[m
+[31m-            duration-150[m
+[31m-            hover:bg-slate-200[m
+[31m-            hover:text-slate-900[m
+[31m-            active:scale-95[m
+[31m-          "[m
+[31m-        >[m
+[31m-          <Minus[m
+[31m-            className="h-4 w-4"[m
+[31m-            strokeWidth={2}[m
+[31m-          />[m
+[31m-        </button>[m
+[31m-[m
+[31m-        {/* CLOSE */}[m
+[31m-        <button[m
+[31m-          type="button"[m
+[31m-          onClick={handleClose}[m
+[31m-          aria-label="Close window"[m
+[31m-          title="Close"[m
+[31m-          className="[m
+[31m-            flex[m
+[31m-            h-9[m
+[31m-            w-10[m
+[31m-            items-center[m
+[31m-            justify-center[m
+[31m-            rounded-lg[m
+[31m-            text-slate-500[m
+[31m-            transition-all[m
+[31m-            duration-150[m
+[31m-            hover:bg-red-50[m
+[31m-            hover:text-red-600[m
+[31m-            active:scale-95[m
+[31m-          "[m
+[31m-        >[m
+[31m-          <X[m
+[31m-            className="h-4 w-4"[m
+[31m-            strokeWidth={2}[m
+[31m-          />[m
+[31m-        </button>[m
+[31m-      </div>[m
+[31m-[m
+[31m-      {/* =====================================================[m
+[31m-          PARTNER[m
+[31m-          ABSOLUTE -> DOES NOT PUSH LOGIN[m
+[31m-         ===================================================== */}[m
+[31m-[m
+[31m-      <div[m
+[31m-        className="[m
+[31m-          absolute[m
+[31m-          left-[3vw][m
+[31m-          top-1/2[m
+[31m-          z-20[m
+[31m-          hidden[m
+[31m-          w-[250px][m
+[31m-          -translate-y-1/2[m
+[31m-          lg:block[m
+[31m-          xl:left-[5vw][m
+[31m-          2xl:left-[8vw][m
+[31m-        "[m
+[31m-      >[m
+[32m+[m[32m    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0A2135] px-4 pb-6 pt-14 sm:px-6">[m
+[32m+[m[32m      {desktop && ([m
+         <div[m
+[31m-          className="[m
+[31m-            flex[m
+[31m-            flex-col[m
+[31m-            items-center[m
+[31m-          "[m
+[32m+[m[32m          className="absolute left-0 right-0 top-0 z-50 flex h-9 items-center justify-between border-b border-white/10 bg-[#071b2b]/95 backdrop-blur-sm"[m
+[32m+[m[32m          onMouseDown={() => void startDragging()}[m
+[32m+[m[32m          onDoubleClick={() => { void toggleMaximizeWindow(); setMaximized((v) => !v); }}[m
+         >[m
+[31m-[m
+[31m-          {/* Partner card */}[m
+[31m-          <div[m
+[31m-            className="[m
+[31m-              flex[m
+[31m-              h-[180px][m
+[31m-              w-[250px][m
+[31m-              items-center[m
+[31m-              justify-center[m
+[31m-              rounded-2xl[m
+[31m-              border[m
+[31m-              border-slate-200[m
+[31m-              bg-white[m
+[31m-              p-5[m
+[31m-              shadow-lg[m
+[31m-              shadow-slate-300/25[m
+[31m-            "[m
+[31m-          >[m
+[32m+[m[32m          <div className="flex h-full items-center gap-2 pl-3">[m
+[32m+[m[32m            <img src="/icon.png" alt="" className="h-5 w-5 rounded object-contain" loading="eager" decoding="async" />[m
+[32m+[m[32m            <span className="select-none text-xs font-semibold text-slate-200">Ikaze Ledger</span>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m          <div className="flex h-full">[m
+[32m+[m[32m            <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={() => void minimizeWindow()} className="flex h-full w-11 items-center justify-center text-slate-300 hover:bg-white/10" aria-label="Minimize"><Minus className="h-4 w-4" /></button>[m
+[32m+[m[32m            <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={() => { void toggleMaximizeWindow(); setMaximized((v) => !v); }} className="flex h-full w-11 items-center justify-center text-slate-300 hover:bg-white/10" aria-label="Maximize">{maximized ? <Copy className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}</button>[m
+[32m+[m[32m            <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={() => void closeWindow()} className="flex h-full w-11 items-center justify-center text-slate-300 hover:bg-red-500 hover:text-white" aria-label="Close"><X className="h-4 w-4" /></button>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      )}[m
+[32m+[m[32m      {/* Lightweight branded background — no expensive blur animation */}[m
+[32m+[m[32m      <div className="pointer-events-none absolute -left-40 -top-40 h-80 w-80 rounded-full bg-[#008CFF]/10 blur-3xl" />[m
+[32m+[m[32m      <div className="pointer-events-none absolute -bottom-40 -right-40 h-80 w-80 rounded-full bg-[#20D878]/10 blur-3xl" />[m
+[32m+[m
+[32m+[m[32m      {/* Partner panel: deliberately positioned far left on desktop */}[m
+[32m+[m[32m      <aside className="absolute left-5 top-1/2 hidden -translate-y-1/2 lg:flex xl:left-10 2xl:left-16">[m
+[32m+[m[32m        <div className="w-52 rounded-2xl border border-white/10 bg-white/[0.06] p-5 text-center shadow-xl backdrop-blur-sm">[m
+[32m+[m[32m          <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-300">[m
+[32m+[m[32m            {t.auth.ourPartner}[m
+[32m+[m[32m          </p>[m
+[32m+[m[32m          <div className="flex h-28 items-center justify-center rounded-xl bg-white p-3 shadow-lg">[m
+             <img[m
+               src="/partner-logo.png"[m
+[31m-              alt="Our Partner"[m
+[31m-              className="[m
+[31m-                max-h-[145px][m
+[31m-                max-w-[220px][m
+[31m-                object-contain[m
+[31m-              "[m
+[31m-            />[m
+[31m-          </div>[m
+[31m-[m
+[31m-          {/* Partner label */}[m
+[31m-          <div[m
+[31m-            className="[m
+[31m-              mt-3[m
+[31m-              flex[m
+[31m-              items-center[m
+[31m-              gap-2[m
+[31m-            "[m
+[31m-          >[m
+[31m-            <div[m
+[31m-              className="[m
+[31m-                h-px[m
+[31m-                w-7[m
+[31m-                bg-[#008CFF][m
+[31m-              "[m
+[31m-            />[m
+[31m-[m
+[31m-            <span[m
+[31m-              className="[m
+[31m-                text-[10px][m
+[31m-                font-bold[m
+[31m-                uppercase[m
+[31m-                tracking-[0.2em][m
+[31m-                text-slate-400[m
+[31m-              "[m
+[31m-            >[m
+[31m-              Our Partner[m
+[31m-            </span>[m
+[31m-[m
+[31m-            <div[m
+[31m-              className="[m
+[31m-                h-px[m
+[31m-                w-7[m
+[31m-                bg-[#20D878][m
+[31m-              "[m
+[32m+[m[32m              alt={t.auth.ourPartner}[m
+[32m+[m[32m              className="max-h-full max-w-full object-contain"[m
+[32m+[m[32m              loading="eager"[m
+[32m+[m[32m              decoding="async"[m
+             />[m
+           </div>[m
+         </div>[m
+[31m-      </div>[m
+[31m-[m
+[31m-      {/* =====================================================[m
+[31m-          LOGIN AREA[m
+[31m-          THIS REMAINS PERFECTLY CENTERED[m
+[31m-         ===================================================== */}[m
+[31m-[m
+[31m-      <div[m
+[31m-        className="[m
+[31m-          relative[m
+[31m-          z-10[m
+[31m-          flex[m
+[31m-          min-h-screen[m
+[31m-          w-full[m
+[31m-          items-center[m
+[31m-          justify-center[m
+[31m-          px-4[m
+[31m-          py-10[m
+[31m-        "[m
+[31m-      >[m
+[31m-        <div className="w-full max-w-md">[m
+[31m-[m
+[31m-          {/* =================================================[m
+[31m-              IKAZE BRAND[m
+[31m-             ================================================= */}[m
+[31m-[m
+[31m-          <div[m
+[31m-            className="[m
+[31m-              mb-6[m
+[31m-              flex[m
+[31m-              flex-col[m
+[31m-              items-center[m
+[31m-              text-center[m
+[31m-            "[m
+[31m-          >[m
+[32m+[m[32m      </aside>[m
+ [m
+[31m-            {/* Small logo */}[m
+[31m-            <div[m
+[31m-              className="[m
+[31m-                relative[m
+[31m-                mb-3[m
+[31m-                flex[m
+[31m-                items-center[m
+[31m-                justify-center[m
+[31m-              "[m
+[31m-            >[m
+[31m-              <div[m
+[31m-                className="[m
+[31m-                  absolute[m
+[31m-                  h-20[m
+[31m-                  w-20[m
+[31m-                  rounded-full[m
+[31m-                  bg-[#008CFF][m
+[31m-                  opacity-10[m
+[31m-                  blur-2xl[m
+[31m-                "[m
+[31m-              />[m
+[31m-[m
+[31m-              <img[m
+[31m-                src="/icon.svg"[m
+[31m-                alt="Ikaze Ledger"[m
+[31m-                className="[m
+[31m-                  relative[m
+[31m-                  h-14[m
+[31m-                  w-14[m
+[31m-                  object-contain[m
+[31m-                  drop-shadow-md[m
+[31m-                "[m
+[31m-              />[m
+[31m-            </div>[m
+[31m-[m
+[31m-            {/* Brand name */}[m
+[31m-            <div[m
+[31m-              className="[m
+[31m-                flex[m
+[31m-                items-center[m
+[31m-                justify-center[m
+[31m-                gap-2[m
+[31m-              "[m
+[31m-            >[m
+[31m-              <span[m
+[31m-                className="[m
+[31m-                  text-2xl[m
+[31m-                  font-extrabold[m
+[31m-                  tracking-[0.16em][m
+[31m-                  text-[#071A2D][m
+[31m-                "[m
+[31m-              >[m
+[31m-                IKAZE[m
+[31m-              </span>[m
+[31m-[m
+[31m-              <span[m
+[31m-                className="[m
+[31m-                  text-2xl[m
+[31m-                  font-extrabold[m
+[31m-                  tracking-[0.07em][m
+[31m-                  text-[#18B968][m
+[31m-                "[m
+[31m-              >[m
+[31m-                LEDGER[m
+[31m-              </span>[m
+[31m-            </div>[m
+[31m-[m
+[31m-            {/* Brand line */}[m
+[31m-            <div[m
+[31m-              className="[m
+[31m-                mt-1.5[m
+[31m-                flex[m
+[31m-                items-center[m
+[31m-                gap-2[m
+[31m-              "[m
+[31m-            >[m
+[31m-              <div[m
+[31m-                className="[m
+[31m-                  h-0.5[m
+[31m-                  w-7[m
+[31m-                  rounded-full[m
+[31m-                  bg-[#008CFF][m
+[31m-                "[m
+[31m-              />[m
+[31m-[m
+[31m-              <span[m
+[31m-                className="[m
+[31m-                  text-[9px][m
+[31m-                  font-semibold[m
+[31m-                  uppercase[m
+[31m-                  tracking-[0.18em][m
+[31m-                  text-slate-500[m
+[31m-                "[m
+[31m-              >[m
+[31m-                Smart Business Management[m
+[31m-              </span>[m
+[31m-[m
+[31m-              <div[m
+[31m-                className="[m
+[31m-                  h-0.5[m
+[31m-                  w-7[m
+[31m-                  rounded-full[m
+[31m-                  bg-[#20D878][m
+[31m-                "[m
+[31m-              />[m
+[31m-            </div>[m
+[31m-[m
+[31m-            {/* Page title */}[m
+[31m-            <h1[m
+[31m-              className="[m
+[31m-                mt-4[m
+[31m-                text-xl[m
+[31m-                font-bold[m
+[31m-                text-[#071A2D][m
+[31m-              "[m
+[31m-            >[m
+[31m-              {title}[m
+[31m-            </h1>[m
+[31m-[m
+[31m-            {subtitle && ([m
+[31m-              <p[m
+[31m-                className="[m
+[31m-                  mt-1[m
+[31m-                  max-w-sm[m
+[31m-                  text-sm[m
+[31m-                  text-slate-500[m
+[31m-                "[m
+[31m-              >[m
+[31m-                {subtitle}[m
+[31m-              </p>[m
+[31m-            )}[m
+[31m-          </div>[m
+[31m-[m
+[31m-          {/* =================================================[m
+[31m-              AUTH CARD[m
+[31m-             ================================================= */}[m
+[31m-[m
+[31m-          <div[m
+[31m-            className="[m
+[31m-              relative[m
+[31m-              overflow-hidden[m
+[31m-              rounded-2xl[m
+[31m-              border[m
+[31m-              border-slate-200[m
+[31m-              bg-white[m
+[31m-              p-6[m
+[31m-              shadow-xl[m
+[31m-              shadow-slate-300/30[m
+[31m-              sm:p-8[m
+[31m-            "[m
+[31m-          >[m
+[31m-[m
+[31m-            {/* Brand line */}[m
+[31m-            <div[m
+[31m-              className="[m
+[31m-                absolute[m
+[31m-                left-0[m
+[31m-                right-0[m
+[31m-                top-0[m
+[31m-                h-1[m
+[31m-                bg-gradient-to-r[m
+[31m-                from-[#008CFF][m
+[31m-                via-[#008CFF][m
+[31m-                to-[#20D878][m
+[31m-              "[m
+[32m+[m[32m      {/* Centered authentication content */}[m
+[32m+[m[32m      <div className="relative z-10 w-full max-w-md">[m
+[32m+[m[32m        <div className="mb-5 flex flex-col items-center text-center">[m
+[32m+[m[32m          <div className="relative mb-3 flex h-14 w-14 items-center justify-center">[m
+[32m+[m[32m            <div className="absolute inset-0 rounded-2xl bg-[#008CFF]/20 blur-xl" />[m
+[32m+[m[32m            <img[m
+[32m+[m[32m              src="/icon.png"[m
+[32m+[m[32m              alt="Ikaze Ledger"[m
+[32m+[m[32m              className="relative h-14 w-14 rounded-xl object-contain shadow-xl ring-1 ring-white/10"[m
+[32m+[m[32m              loading="eager"[m
+[32m+[m[32m              decoding="async"[m
+             />[m
+[31m-[m
+[31m-            {children}[m
+           </div>[m
+ [m
+[31m-          {/* =================================================[m
+[31m-              OFFLINE STATUS[m
+[31m-             ================================================= */}[m
+[31m-[m
+[31m-          <div[m
+[31m-            className="[m
+[31m-              mt-4[m
+[31m-              flex[m
+[31m-              items-center[m
+[31m-              justify-center[m
+[31m-              gap-2[m
+[31m-            "[m
+[31m-          >[m
+[31m-            <span[m
+[31m-              className="[m
+[31m-                h-2[m
+[31m-                w-2[m
+[31m-                rounded-full[m
+[31m-                bg-[#20D878][m
+[31m-                shadow-sm[m
+[31m-                shadow-[#20D878][m
+[31m-              "[m
+[31m-            />[m
+[32m+[m[32m          <div className="flex items-center justify-center gap-2">[m
+[32m+[m[32m            <span className="text-2xl font-extrabold tracking-[0.16em] text-white">IKAZE</span>[m
+[32m+[m[32m            <span className="text-2xl font-extrabold tracking-[0.07em] text-[#20D878]">LEDGER</span>[m
+[32m+[m[32m          </div>[m
+ [m
+[31m-            <span[m
+[31m-              className="[m
+[31m-                text-[10px][m
+[31m-                font-medium[m
+[31m-                tracking-wide[m
+[31m-                text-slate-500[m
+[31m-              "[m
+[31m-            >[m
+[31m-              Offline · Secure · Local Software[m
+[32m+[m[32m          <div className="mt-1.5 flex items-center gap-2">[m
+[32m+[m[32m            <div className="h-0.5 w-7 rounded-full bg-[#008CFF]" />[m
+[32m+[m[32m            <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">[m
+[32m+[m[32m              Smart Business Management[m
+             </span>[m
+[32m+[m[32m            <div className="h-0.5 w-7 rounded-full bg-[#20D878]" />[m
+           </div>[m
+ [m
+[31m-          {/* =================================================[m
+[31m-              POWERED BY[m
+[31m-             ================================================= */}[m
+[32m+[m[32m          {typeof clientCount === 'number' && ([m
+[32m+[m[32m            <div className="mt-3 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">[m
+[32m+[m[32m              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#008CFF] to-[#20D878] text-[9px] font-bold text-white">#</span>[m
+[32m+[m[32m              <span className="text-[11px] font-medium text-slate-300">{t.auth.clientsOnDevice}</span>[m
+[32m+[m[32m              <span className="text-sm font-extrabold text-[#20D878]">{clientCount.toLocaleString()}</span>[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          )}[m
+ [m
+[31m-          <p[m
+[31m-            className="[m
+[31m-              mt-2[m
+[31m-              text-center[m
+[31m-              text-[10px][m
+[31m-              font-medium[m
+[31m-              tracking-wide[m
+[31m-              text-slate-400[m
+[31m-            "[m
+[31m-          >[m
+[31m-            Powered by{' '}[m
+[31m-            <span[m
+[31m-              className="[m
+[31m-                font-bold[m
+[31m-                text-[#071A2D][m
+[31m-              "[m
+[31m-            >[m
+[31m-              MUD SOFTWARE COMPANY[m
+[31m-            </span>[m
+[31m-          </p>[m
+[32m+[m[32m          <h1 className="mt-4 text-xl font-bold text-white">{title}</h1>[m
+[32m+[m[32m          {subtitle && <p className="mt-1 max-w-sm text-sm text-slate-400">{subtitle}</p>}[m
+[32m+[m[32m        </div>[m
+ [m
+[31m-          <p[m
+[31m-            className="[m
+[31m-              mt-1[m
+[31m-              text-center[m
+[31m-              text-[9px][m
+[31m-              text-slate-400[m
+[31m-            "[m
+[31m-          >[m
+[31m-            IKAZE Ledger[m
+[31m-          </p>[m
+[32m+[m[32m        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white p-6 shadow-2xl shadow-black/30 sm:p-8">[m
+[32m+[m[32m          <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-[#008CFF] via-[#008CFF] to-[#20D878]" />[m
+[32m+[m[32m          {children}[m
+[32m+[m[32m        </div>[m
+[32m+[m
+[32m+[m[32m        <div className="mt-4 flex items-center justify-center gap-2">[m
+[32m+[m[32m          <span className="relative flex h-2 w-2">[m
+[32m+[m[32m            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#20D878]/50" />[m
+[32m+[m[32m            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#20D878]" />[m
+[32m+[m[32m          </span>[m
+[32m+[m[32m          <span className="text-[10px] font-medium tracking-wide text-slate-400">{t.auth.offlineSecureLocal}</span>[m
+         </div>[m
+[32m+[m[32m        <p className="mt-1 text-center text-[10px] text-slate-500">{t.auth.poweredByMud}</p>[m
+       </div>[m
+     </div>[m
+   );[m

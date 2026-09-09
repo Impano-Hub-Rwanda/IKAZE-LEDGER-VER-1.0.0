@@ -1,13 +1,15 @@
 {
   "name": "ikaze-ledger",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "build:windows": "npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc",
+    "build:windows:debug": "npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc --debug"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.0",

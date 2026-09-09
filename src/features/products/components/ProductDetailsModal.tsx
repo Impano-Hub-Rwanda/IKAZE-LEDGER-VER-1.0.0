@@ -45,7 +45,7 @@ export function ProductDetailsModal({ open, onClose, product }: ProductDetailsMo
             <div className="flex items-start gap-3 border-b border-slate-100 pb-3 dark:border-slate-700">
               <FileText className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Description</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t.products.description}</p>
                 <p className="break-words text-sm font-semibold text-slate-800 dark:text-white">{product.description}</p>
               </div>
             </div>

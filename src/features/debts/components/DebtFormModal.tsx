@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, type FormEvent } from 'react';
 import { Plus, Trash2, ShoppingCart, AlertCircle, Package, Wrench } from 'lucide-react';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
@@ -44,6 +44,10 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [editItemsLoading, setEditItemsLoading] = useState(false);
+  const [editLinesDirty, setEditLinesDirty] = useState(false);
+  const [originalQtyByProduct, setOriginalQtyByProduct] = useState<Record<number, number>>({});
+  const editLoadSeq = useRef(0);
 
   const loadOptions = async () => {
     setFetching(true);
@@ -55,7 +59,7 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
       const [cRes, pRes, sRes] = await Promise.all([
         db.query<Customer>('SELECT * FROM customers ORDER BY full_name'),
         db.query<Product>(pSql),
-        db.query<Service>("SELECT * FROM services WHERE status = 'active' ORDER BY name"),
+        db.query<Service>(isEdit ? 'SELECT * FROM services ORDER BY name' : "SELECT * FROM services WHERE status = 'active' ORDER BY name"),
       ]);
       setCustomers(cRes.rows as Customer[]);
       setProducts(pRes.rows as Product[]);
@@ -68,45 +72,73 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
   };
 
   useEffect(() => {
-    if (open) {
-      void loadOptions();
-      if (editing) {
-        setCustomerId(editing.customer_id);
-        setDueDate(editing.due_date ?? '');
-        setGuarantor(editing.guarantor ?? '');
-        setNote(editing.note ?? '');
-        void loadEditingLines(editing.id);
-      }
+    if (!open) return;
+
+    setEditLinesDirty(false);
+    setOriginalQtyByProduct({});
+    setLines([]);
+
+    void loadOptions();
+    if (editing) {
+      setCustomerId(editing.customer_id);
+      setDueDate(editing.due_date ?? '');
+      setGuarantor(editing.guarantor ?? '');
+      setNote(editing.note ?? '');
+      void loadEditingLines(editing.id);
+    } else {
+      setCustomerId('');
+      setDueDate('');
+      setGuarantor('');
+      setNote('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
   const loadEditingLines = async (debtId: number) => {
+    const loadSeq = ++editLoadSeq.current;
+    setEditItemsLoading(true);
     try {
       const db = getDb();
       const res = await db.query<{
         product_id: number | null; service_id: number | null; item_type: string;
         product_name: string; quantity: number; unit_price: number;
       }>(
-        'SELECT product_id, service_id, item_type, product_name, quantity, unit_price FROM debt_items WHERE debt_id = $1',
+        `SELECT di.product_id, di.service_id, di.item_type,
+                COALESCE(
+                  NULLIF(TRIM(di.product_name), ''),
+                  NULLIF(TRIM(p.name), ''),
+                  NULLIF(TRIM(s.name), ''),
+                  CASE
+                    WHEN di.item_type = 'service' AND di.service_id IS NOT NULL THEN CONCAT('Service #', di.service_id)
+                    WHEN di.product_id IS NOT NULL THEN CONCAT('Product #', di.product_id)
+                    ELSE 'Item'
+                  END
+                ) AS product_name,
+                di.quantity, di.unit_price
+         FROM debt_items di
+         LEFT JOIN products p ON p.id = di.product_id
+         LEFT JOIN services s ON s.id = di.service_id
+         WHERE di.debt_id = $1
+         ORDER BY di.id`,
         [debtId],
       );
       const rows = res.rows as typeof res.rows;
-      const productIds = rows.filter((r) => r.product_id).map((r) => r.product_id!) as number[];
-      let stockMap: Record<number, number> = {};
-      if (productIds.length) {
-        const stockRes = await db.query<{ id: number; stock_quantity: number }>(
-          'SELECT id, stock_quantity FROM products WHERE id = ANY($1)',
-          [productIds],
-        );
-        stockMap = Object.fromEntries(
-          (stockRes.rows as typeof stockRes.rows).map((r) => [r.id, Number(r.stock_quantity)]),
-        );
-      }
+
+      // Item data must never depend on a secondary stock query. This was the
+      // cause of restored debts appearing empty in Edit when the stock lookup
+      // failed: the old code only called setLines() after that lookup.
       const origQtyByProduct: Record<number, number> = {};
       rows.forEach((r) => {
-        if (r.product_id) origQtyByProduct[r.product_id] = (origQtyByProduct[r.product_id] ?? 0) + r.quantity;
+        if (r.product_id) {
+          origQtyByProduct[r.product_id] = (origQtyByProduct[r.product_id] ?? 0) + Number(r.quantity || 0);
+        }
       });
+      if (loadSeq !== editLoadSeq.current) return;
+      setOriginalQtyByProduct(origQtyByProduct);
+
+      // Show the recovered items immediately, even if live stock cannot be
+      // queried. Existing quantities remain valid through the original-qty
+      // allowance; stock is filled in below when available.
       setLines(
         rows.map((r) => ({
           key: nextKey(),
@@ -114,25 +146,53 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
           service_id: r.service_id ?? null,
           item_type: (r.item_type ?? 'product') as 'product' | 'service',
           product_name: r.product_name,
-          quantity: r.quantity,
+          quantity: Number(r.quantity),
           unit_price: Number(r.unit_price),
-          subtotal: r.quantity * Number(r.unit_price),
-          available_stock: r.product_id
-            ? (stockMap[r.product_id] ?? 0) + (origQtyByProduct[r.product_id] ?? 0)
-            : 0,
+          subtotal: Number(r.quantity) * Number(r.unit_price),
+          available_stock: r.product_id ? (origQtyByProduct[r.product_id] ?? 0) : 999,
         })),
       );
-    } catch {
-      // ignore
+
+      if (rows.length > 0) {
+        const productIds = [...new Set(rows.filter((r) => r.product_id).map((r) => r.product_id!))];
+        if (productIds.length) {
+          try {
+            const stockRes = await db.query<{ id: number; stock_quantity: number }>(
+              `SELECT id, stock_quantity FROM products WHERE id IN (${productIds.map((_, i) => `$${i + 1}`).join(', ')})`,
+              productIds,
+            );
+            const stockMap = Object.fromEntries(
+              (stockRes.rows as typeof stockRes.rows).map((r) => [r.id, Number(r.stock_quantity)]),
+            );
+            if (loadSeq !== editLoadSeq.current) return;
+            setLines((prev) => prev.map((line) => (
+              line.item_type === 'product' && line.product_id > 0
+                ? { ...line, available_stock: (stockMap[line.product_id] ?? 0) + (origQtyByProduct[line.product_id] ?? 0) }
+                : line
+            )));
+          } catch {
+            // Keep the item rows already loaded. Stock is auxiliary data.
+          }
+        }
+      }
+    } catch (err) {
+      if (loadSeq !== editLoadSeq.current) return;
+      setFormError(err instanceof Error ? err.message : 'Failed to load debt items.');
+      setLines([]);
+    } finally {
+      if (loadSeq === editLoadSeq.current) setEditItemsLoading(false);
     }
   };
 
   const reset = () => {
+    editLoadSeq.current += 1;
     setCustomerId('');
     setDueDate('');
     setGuarantor('');
     setNote('');
     setLines([]);
+    setOriginalQtyByProduct({});
+    setEditLinesDirty(false);
     setErrors({});
     setFormError('');
   };
@@ -143,6 +203,7 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
   };
 
       const addLine = () => {
+    setEditLinesDirty(true);
     setLines((prev) => [
       ...prev,
       {
@@ -160,6 +221,7 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
   };
 
   const updateLine = (key: string, patch: Partial<LineState>) => {
+    setEditLinesDirty(true);
     setLines((prev) =>
       prev.map((l) => {
         if (l.key !== key) return l;
@@ -170,7 +232,7 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
             if (p) {
               next.product_name = p.name;
               next.unit_price = Number(p.selling_price);
-              next.available_stock = Number(p.stock_quantity);
+              next.available_stock = Number(p.stock_quantity) + (originalQtyByProduct[p.id] ?? 0);
             }
           } else if (next.item_type === 'service' && next.service_id) {
             const s = services.find((ss) => ss.id === next.service_id);
@@ -190,18 +252,26 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
   };
 
   const removeLine = (key: string) => {
+    setEditLinesDirty(true);
     setLines((prev) => prev.filter((l) => l.key !== key));
   };
 
-  const total = useMemo(
+  const lineItemsTotal = useMemo(
     () => lines.reduce((sum, l) => sum + l.subtotal, 0),
     [lines],
   );
 
+  // Existing debts keep their persisted total until the user changes item
+  // lines. This prevents legacy/old records with incomplete item history from
+  // being silently rewritten just by opening and saving the form.
+  const total = isEdit && editing && !editLinesDirty
+    ? Number(editing.total_amount)
+    : lineItemsTotal;
+
   const validateForm = (): boolean => {
     const next: Record<string, string> = {};
     if (!customerId) next.customerId = t.debts.selectCustomer;
-    if (lines.length === 0) {
+    if (lines.length === 0 && (!isEdit || editLinesDirty)) {
       setFormError(t.debts.addAtLeastOne);
       return false;
     }
@@ -249,7 +319,16 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
     try {
       const db = getDb();
       const uid = user.id;
-      const totalAmount = lines.reduce((s, l) => s + l.subtotal, 0);
+      const totalAmount = isEdit && editing && !editLinesDirty
+        ? Number(editing.total_amount)
+        : lineItemsTotal;
+      if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+        setFormError('The debt total must be greater than 0.');
+        setLoading(false);
+        return;
+      }
+      await db.query('BEGIN');
+      try {
 
       if (isEdit && editing) {
         const oldRes = await db.query<{ product_id: number | null; item_type: string; quantity: number }>(
@@ -264,6 +343,7 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
               movementType: 'in',
               quantityChange: item.quantity,
               reason: t.inventory.debtRestockReason,
+              manageTransaction: false,
             });
           }
         }
@@ -294,6 +374,7 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
               movementType: 'out',
               quantityChange: -l.quantity,
               reason: t.inventory.debtSaleReason,
+              manageTransaction: false,
             });
           }
         }
@@ -315,15 +396,22 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
               movementType: 'out',
               quantityChange: -l.quantity,
               reason: t.inventory.debtSaleReason,
+              manageTransaction: false,
             });
           }
         }
+        await db.query('COMMIT');
         reset();
         onSaved(debtId);
         return;
       }
+      await db.query('COMMIT');
       reset();
       onSaved();
+      } catch (err) {
+        try { await db.query('ROLLBACK'); } catch { /* transaction may already be closed */ }
+        throw err;
+      }
     } catch {
       setFormError(t.debts.errorSaving);
     } finally {
@@ -331,11 +419,11 @@ export function DebtFormModal({ open, onClose, onSaved, editing = null }: DebtFo
     }
   };
 
-  const hasItems = products.length > 0 || services.length > 0;
+  const hasItems = products.length > 0 || services.length > 0 || (isEdit && lines.length > 0);
 
   return (
     <Modal open={open} onClose={handleClose} title={isEdit ? t.debts.edit : t.debts.add} size="2xl">
-      {fetching ? (
+      {fetching || (isEdit && editItemsLoading) ? (
         <div className="flex justify-center py-10">
           <Spinner size="lg" />
         </div>

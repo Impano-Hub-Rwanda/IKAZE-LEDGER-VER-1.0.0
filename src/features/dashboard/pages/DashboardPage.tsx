@@ -3,7 +3,7 @@ import { Users, Package, CreditCard, Banknote, Wallet, AlertTriangle } from 'luc
 import { useLanguage } from '../../../i18n';
 import { getDb } from '../../../lib/database';
 import { formatCurrency } from '../../../utils/formatCurrency';
-import { Spinner } from '../../../components/ui/Spinner';
+import { DashboardSkeleton } from '../../../components/ui/Skeleton';
 
 interface DashboardStats {
   totalCustomers: number;
@@ -70,14 +70,7 @@ export function DashboardPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Spinner size="lg" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">{t.dashboard.loading}</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error) {

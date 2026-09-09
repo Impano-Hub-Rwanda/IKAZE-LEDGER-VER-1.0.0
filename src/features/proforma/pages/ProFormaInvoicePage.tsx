@@ -37,7 +37,6 @@ import { Alert } from '../../../components/ui/Alert';
 import { PageHeader } from '../../../components/ui/Primitives';
 import { PrintPreviewModal } from '../../../components/ui/PrintPreviewModal';
 
-
 import {
   buildPrintHeader,
   buildPrintFooter,
@@ -51,13 +50,7 @@ import {
 
 import type { Customer, Product } from '../../../types';
 import type { Service } from '../../../types/service';
-declare module 'jspdf' {
-  interface jsPDF {
-    lastAutoTable?: {
-      finalY: number;
-    };
-  }
-}
+
 type ItemType = 'product' | 'service';
 
 interface LineItem {
@@ -111,6 +104,65 @@ interface SavedProformaItem {
   quantity: number;
   unit_price: number;
   total: number;
+}
+
+/**
+ * Re-hydrate saved proforma item names from their referenced product/service.
+ * The ID is authoritative; product_name is retained only as a safe fallback
+ * for records whose original product/service has since been removed.
+ */
+async function hydrateSavedProformaItems(
+  db: ReturnType<typeof getDb>,
+  items: SavedProformaItem[],
+): Promise<SavedProformaItem[]> {
+  if (!items.length) return [];
+
+  const productIds = [...new Set(
+    items
+      .filter((item) => item.item_type !== 'service' && item.product_id)
+      .map((item) => item.product_id as number),
+  )];
+  const serviceIds = [...new Set(
+    items
+      .filter((item) => item.item_type === 'service' && item.service_id)
+      .map((item) => item.service_id as number),
+  )];
+
+  const [productsRes, servicesRes] = await Promise.all([
+    productIds.length
+      ? db.query<{ id: number; name: string }>(
+          'SELECT id, name FROM products WHERE id = ANY($1)',
+          [productIds],
+        )
+      : Promise.resolve({ rows: [] as { id: number; name: string }[] }),
+    serviceIds.length
+      ? db.query<{ id: number; name: string }>(
+          'SELECT id, name FROM services WHERE id = ANY($1)',
+          [serviceIds],
+        )
+      : Promise.resolve({ rows: [] as { id: number; name: string }[] }),
+  ]);
+
+  const productNames = new Map(
+    (productsRes.rows as { id: number; name: string }[]).map((row) => [row.id, row.name]),
+  );
+  const serviceNames = new Map(
+    (servicesRes.rows as { id: number; name: string }[]).map((row) => [row.id, row.name]),
+  );
+
+  return items.map((item) => {
+    const liveName = item.item_type === 'service'
+      ? (item.service_id ? serviceNames.get(item.service_id) : undefined)
+      : (item.product_id ? productNames.get(item.product_id) : undefined);
+
+    return {
+      ...item,
+      product_name: liveName?.trim() || item.product_name?.trim() ||
+        (item.item_type === 'service'
+          ? `Service #${item.service_id ?? ''}`
+          : `Product #${item.product_id ?? ''}`),
+    };
+  });
 }
 
 let lineIdCounter = 1;
@@ -625,9 +677,10 @@ export function ProFormaInvoicePage() {
     const footerHtml = buildPrintFooter({
       businessInfo: bizInfo,
       confidentialLabel: tp.confidential,
-      pageLabel: tp.pageOf
-        .replace('{a}', '1')
-        .replace('{b}', '1'),
+      // Browser print can span multiple pages, while this HTML builder
+      // cannot know the final page count reliably. Do not print a false
+      // '1 of 1' label; PDF export has deterministic page numbering.
+      pageLabel: '',
       poweredBy: 'Powered by MUD Software Company',
     });
 
@@ -644,7 +697,7 @@ export function ProFormaInvoicePage() {
               <strong>${esc(item.productName)}</strong>
               ${
                 item.itemType === 'service'
-                  ? `<div style="font-size:8px;color:#2563eb;font-weight:bold">SERVICE</div>`
+                  ? `<div style="font-size:8px;color:#2563eb;font-weight:bold">${typeof localStorage !== 'undefined' && localStorage.getItem('dms-language') === 'rw' ? 'SERIVISI' : 'SERVICE'}</div>`
                   : ''
               }
             </td>
@@ -1285,8 +1338,8 @@ export function ProFormaInvoicePage() {
       return tp.selectCustomerFirst;
     }
 
-    const hasItems = lineItems.some(
-      (item) => item.productName.trim(),
+    const hasItems = lineItems.some((item) =>
+      item.itemType === 'service' ? Boolean(item.serviceId) : Boolean(item.productId),
     );
 
     if (!hasItems) {
@@ -1319,9 +1372,24 @@ export function ProFormaInvoicePage() {
       const db = getDb();
       const cust = selectedCustomer;
 
-      const itemsToSave = lineItems.filter(
-        (item) => item.productName.trim(),
-      );
+      // Save the selected database ID as the source of truth and always
+      // derive a reliable name from the current product/service list.
+      // This prevents an empty/stale product_name snapshot from making an
+      // otherwise valid line disappear from saved proformas/PDFs.
+      const itemsToSave = lineItems
+        .filter((item) =>
+          item.itemType === 'service' ? Boolean(item.serviceId) : Boolean(item.productId),
+        )
+        .map((item) => {
+          const source = item.itemType === 'service'
+            ? services.find((s) => s.id === item.serviceId)
+            : products.find((p) => p.id === item.productId);
+          return {
+            ...item,
+            productName: item.productName.trim() || source?.name ||
+              (item.itemType === 'service' ? `Service #${item.serviceId}` : `Product #${item.productId}`),
+          };
+        });
 
       try {
         await db.query('BEGIN');
@@ -1689,8 +1757,10 @@ export function ProFormaInvoicePage() {
           [pf.id],
         );
 
-      const items =
-        itemsRes.rows as SavedProformaItem[];
+      const items = await hydrateSavedProformaItems(
+        db,
+        itemsRes.rows as SavedProformaItem[],
+      );
 
       setEditingId(pf.id);
       setInvoiceNo(pf.invoice_no);
@@ -1772,8 +1842,10 @@ export function ProFormaInvoicePage() {
           [pf.id],
         );
 
-      const items =
-        itemsRes.rows as SavedProformaItem[];
+      const items = await hydrateSavedProformaItems(
+        db,
+        itemsRes.rows as SavedProformaItem[],
+      );
 
       setEditingId(null);
 
@@ -2431,8 +2503,9 @@ export function ProFormaInvoicePage() {
       },
     });
 
- const afterTable =
-  (doc.lastAutoTable?.finalY ?? headerY) + 6;
+    const afterTable =
+      (doc.lastAutoTable?.finalY ??
+        headerY) + 6;
 
     /*
      * TOTALS

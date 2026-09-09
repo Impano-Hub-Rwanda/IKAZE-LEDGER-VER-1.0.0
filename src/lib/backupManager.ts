@@ -11,14 +11,15 @@ import { writeFile, readFile, saveFileDialog, showMessageBox, confirmDialog, isT
 
 // ── Backup format versioning ──────────────────────────────
 const BACKUP_FORMAT_VERSION = 2;
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.8';
+const MAX_BACKUP_JSON_CHARS = 50_000_000;
 
 // Parent-before-child order for INSERT; reversed for DELETE
 const DB_TABLES = [
   'users', 'security_questions', 'settings',
   'customers', 'products', 'services',
   'debts', 'debt_items', 'payments',
-  'inventory_movements', 'proforma_invoices', 'proforma_items',
+  'inventory_movements', 'proforma_invoices', 'proforma_items', 'demand_letters',
   'audit_logs',
 ] as const;
 
@@ -73,12 +74,15 @@ async function sha256Hex(text: string): Promise<string> {
  */
 export async function exportDatabaseSnapshot(): Promise<DatabaseSnapshot> {
   const db = getDb();
-  const tables: TableData[] = [];
-
-  for (const table of DB_TABLES) {
-    const result = await db.query<ExportRow>(`SELECT * FROM ${table} ORDER BY id`);
-    tables.push({ name: table, rows: result.rows as ExportRow[] });
-  }
+  // These reads are independent. Let PGlite schedule them together instead of
+  // paying a JS/IPC round-trip for each table sequentially.
+  const tableResults = await Promise.all(
+    DB_TABLES.map(async (table) => {
+      const result = await db.query<ExportRow>(`SELECT * FROM ${table}`);
+      return { name: table, rows: result.rows as ExportRow[] } as TableData;
+    }),
+  );
+  const tables = tableResults;
 
   const createdAt = new Date().toISOString();
   // Checksum covers table data (not the checksum field itself)
@@ -92,6 +96,24 @@ export async function exportDatabaseSnapshot(): Promise<DatabaseSnapshot> {
     checksum,
     tables,
   };
+}
+
+// Backup files are untrusted input. Table/column identifiers must never be
+// accepted blindly into SQL statements. Keep the table set closed and only
+// allow normal PostgreSQL identifier characters for columns.
+function safeIdentifier(value: unknown): string {
+  if (typeof value !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
+    throw new Error('Invalid backup file: unsafe database identifier');
+  }
+  return value;
+}
+
+function validateBackupTableName(name: unknown): string {
+  const table = safeIdentifier(name);
+  if (!(DB_TABLES as readonly string[]).includes(table)) {
+    throw new Error(`Invalid backup file: unsupported table "${table}"`);
+  }
+  return table;
 }
 
 // ── Validation ────────────────────────────────────────────
@@ -150,6 +172,22 @@ export async function validateSnapshot(snapshot: unknown): Promise<DatabaseSnaps
     if (!t || typeof t.name !== 'string' || !Array.isArray(t.rows)) {
       throw new Error('Invalid backup file: malformed table entry');
     }
+    validateBackupTableName(t.name);
+    // Validate identifiers once per table. Extra keys on later rows are not
+    // used by the restore query, so scanning every key on every row only adds
+    // CPU cost for large backups without improving SQL safety.
+    if (t.rows.length > 0) {
+      const firstRow = t.rows[0];
+      if (!firstRow || typeof firstRow !== 'object' || Array.isArray(firstRow)) {
+        throw new Error('Invalid backup file: malformed row');
+      }
+      for (const key of Object.keys(firstRow)) safeIdentifier(key);
+    }
+    for (const row of t.rows) {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) {
+        throw new Error('Invalid backup file: malformed row');
+      }
+    }
   }
 
   return snapshot as DatabaseSnapshot;
@@ -179,147 +217,183 @@ async function migrateLegacySnapshot(legacy: LegacySnapshot): Promise<DatabaseSn
   };
 }
 
+// Normalize legacy debt_items before insertion. Older backups may not contain
+// service_id/item_type, and some early snapshots used slightly different item
+// field names. We preserve every recoverable business value and derive only
+// fields that are structurally required by the current schema.
+function normalizeLegacyDebtItems(tableData: TableData | undefined): TableData | undefined {
+  if (!tableData) return undefined;
+  const rows = tableData.rows.map((raw) => {
+    const row = { ...raw } as Record<string, unknown>;
+    const productId = row.product_id ?? row.productId ?? null;
+    const serviceId = row.service_id ?? row.serviceId ?? null;
+    const rawType = row.item_type ?? row.type;
+    const itemType = rawType === 'service' || serviceId !== null ? 'service' : 'product';
+    const name = row.product_name ?? row.item_name ?? row.name ?? '';
+    const quantity = Number(row.quantity ?? 1);
+    const unitPrice = Number(row.unit_price ?? row.price ?? 0);
+    const subtotalValue = row.subtotal ?? row.total ?? row.amount;
+    const subtotal = subtotalValue == null || !Number.isFinite(Number(subtotalValue))
+      ? quantity * unitPrice
+      : Number(subtotalValue);
+
+    // Write current-schema names while retaining any other compatible fields.
+    row.product_id = itemType === 'product' && productId != null ? Number(productId) : null;
+    row.service_id = itemType === 'service' && serviceId != null ? Number(serviceId) : null;
+    row.item_type = itemType;
+    row.product_name = String(name ?? '');
+    row.quantity = Number.isFinite(quantity) ? quantity : 1;
+    row.unit_price = Number.isFinite(unitPrice) ? unitPrice : 0;
+    row.subtotal = Number.isFinite(subtotal) ? subtotal : 0;
+    return row;
+  });
+  return { ...tableData, rows };
+}
+
+// After restoring legacy rows, repair only structural/derived item data.
+// IMPORTANT: never recalculate a persisted debt total from debt_items here.
+// Historical backups can legitimately contain total-only debts or incomplete
+// item history; silently replacing their stored total would change financial
+// data during restore.
+async function reconcileRestoredDebtData(db: ReturnType<typeof getDb>): Promise<void> {
+  await db.query(`
+    UPDATE debt_items di
+    SET product_name = p.name
+    FROM products p
+    WHERE di.product_id = p.id
+      AND (di.product_name IS NULL OR TRIM(di.product_name) = '')
+  `);
+  await db.query(`
+    UPDATE debt_items di
+    SET product_name = s.name
+    FROM services s
+    WHERE di.service_id = s.id
+      AND (di.product_name IS NULL OR TRIM(di.product_name) = '')
+  `);
+  await db.query(`
+    UPDATE debt_items
+    SET product_name = CASE
+      WHEN item_type = 'service' AND service_id IS NOT NULL THEN CONCAT('Service #', service_id)
+      WHEN product_id IS NOT NULL THEN CONCAT('Product #', product_id)
+      ELSE 'Item'
+    END
+    WHERE product_name IS NULL OR TRIM(product_name) = ''
+  `);
+}
+
 // ── Restore (atomic with rollback) ────────────────────────
 
 /**
  * Imports a validated snapshot and restores all table data atomically.
  * If any step fails, the database is rolled back to its pre-restore state.
  *
- * Strategy: dump current data to an in-memory snapshot, then attempt the
- * restore. On failure, re-insert the dumped data.
+ * Strategy: execute the complete replacement inside one PostgreSQL transaction.
+ * On failure, ROLLBACK leaves the pre-restore database unchanged.
  */
 export async function importDatabaseSnapshot(snapshot: DatabaseSnapshot): Promise<void> {
   const db = getDb();
 
-  // Build a map of table data from the snapshot for fast lookup
   const tableMap = new Map<string, TableData>();
   for (const t of snapshot.tables) {
-    tableMap.set(t.name, t);
+    const table = validateBackupTableName(t.name);
+    tableMap.set(table, table === 'debt_items' ? normalizeLegacyDebtItems(t)! : t);
   }
 
-  // Save current state for rollback
-  const backupState: { table: string; rows: ExportRow[] }[] = [];
-  for (const table of DB_TABLES) {
-    const result = await db.query<ExportRow>(`SELECT * FROM ${table} ORDER BY id`);
-    backupState.push({ table, rows: result.rows as ExportRow[] });
-  }
-
-  let restoreFailed = false;
-
+  // PGlite supports PostgreSQL transactions. Use one transaction for the whole
+  // restore instead of making a second full in-memory copy for manual rollback.
+  // This is substantially faster for large databases and remains atomic.
   try {
-    // Disable FK constraints during restore
-    await db.query(`SET session_replication_role = 'replica'`);
+    await db.query('BEGIN');
 
-    // Delete existing data in reverse dependency order
-    const deleteOrder = [...DB_TABLES].reverse();
-    for (const table of deleteOrder) {
+    // Delete in dependency order and insert in parent-before-child order.
+    // No FK disabling is necessary because the ordering is already correct.
+    for (const table of [...DB_TABLES].reverse()) {
       await db.query(`DELETE FROM ${table}`);
     }
 
-    // Reset sequences
-    for (const table of DB_TABLES) {
-      try {
-        await db.query(`ALTER SEQUENCE ${table}_id_seq RESTART WITH 1`);
-      } catch {
-        // Some tables might not have an id sequence
-      }
+    // Read the current schema once. This makes restore forward-compatible with
+    // backups from the immediately previous app version when a table gained a
+    // new column: columns that no longer exist are ignored, while missing
+    // current columns are left to PostgreSQL defaults/constraints.
+    const schemaResult = await db.query<{ table_name: string; column_name: string }>(
+      `SELECT table_name, column_name
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = ANY($1::text[])
+       ORDER BY table_name, ordinal_position`,
+      [Array.from(DB_TABLES)],
+    );
+    const currentColumns = new Map<string, Set<string>>();
+    for (const row of schemaResult.rows) {
+      const table = String(row.table_name);
+      const set = currentColumns.get(table) ?? new Set<string>();
+      set.add(String(row.column_name));
+      currentColumns.set(table, set);
     }
 
-    // Insert data in dependency (parent-before-child) order
     for (const table of DB_TABLES) {
       const tableData = tableMap.get(table);
       if (!tableData || tableData.rows.length === 0) continue;
 
-      // Batch insert: build a single multi-row INSERT for performance
-      const rows = tableData.rows;
-      const columnNames = Object.keys(rows[0]);
-      const colCount = columnNames.length;
+      const availableColumns = currentColumns.get(table) ?? new Set<string>();
+      const backupColumns = Object.keys(tableData.rows[0]).map(safeIdentifier);
+      const columnNames = backupColumns.filter((column) => availableColumns.has(column));
+      if (columnNames.length === 0) continue;
 
-      // Insert in batches of 50 rows to balance speed and parameter limits
-      const BATCH_SIZE = 50;
+      const colCount = columnNames.length;
+      const rows = tableData.rows;
+      // Keep enough rows per statement to reduce query overhead without creating
+      // oversized parameter arrays on bigger backups.
+      const BATCH_SIZE = 2000;
+
       for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-        const batch = rows.slice(i, i + BATCH_SIZE);
+        const end = Math.min(i + BATCH_SIZE, rows.length);
         const values: unknown[] = [];
         const placeholders: string[] = [];
 
-        for (let r = 0; r < batch.length; r++) {
-          const row = batch[r];
-          const base = (r * colCount);
+        for (let r = i; r < end; r++) {
+          const row = rows[r];
           const ph: string[] = [];
           for (let c = 0; c < colCount; c++) {
-            ph.push(`$${base + c + 1}`);
+            ph.push(`$${(r - i) * colCount + c + 1}`);
             values.push(row[columnNames[c]]);
           }
           placeholders.push(`(${ph.join(', ')})`);
         }
 
-        const sql = `INSERT INTO ${table} (${columnNames.join(', ')}) VALUES ${placeholders.join(', ')}`;
-        await db.query(sql, values);
+        await db.query(
+          `INSERT INTO ${safeIdentifier(table)} (${columnNames.join(', ')}) VALUES ${placeholders.join(', ')}`,
+          values,
+        );
       }
     }
-  } catch (err) {
-    restoreFailed = true;
-    // Rollback: restore the saved state
-    try {
-      const deleteOrder = [...DB_TABLES].reverse();
-      for (const table of deleteOrder) {
-        await db.query(`DELETE FROM ${table}`);
-      }
-      for (const table of deleteOrder) {
-        try { await db.query(`ALTER SEQUENCE ${table}_id_seq RESTART WITH 1`); } catch { /* no seq */ }
-      }
-      // Re-insert saved data in parent-before-child order
-      for (const table of DB_TABLES) {
-        const saved = backupState.find((s) => s.table === table);
-        if (!saved || saved.rows.length === 0) continue;
-        const columnNames = Object.keys(saved.rows[0]);
-        const colCount = columnNames.length;
-        const BATCH_SIZE = 50;
-        for (let i = 0; i < saved.rows.length; i += BATCH_SIZE) {
-          const batch = saved.rows.slice(i, i + BATCH_SIZE);
-          const values: unknown[] = [];
-          const placeholders: string[] = [];
-          for (let r = 0; r < batch.length; r++) {
-            const row = batch[r];
-            const base = (r * colCount);
-            const ph: string[] = [];
-            for (let c = 0; c < colCount; c++) {
-              ph.push(`$${base + c + 1}`);
-              values.push(row[columnNames[c]]);
-            }
-            placeholders.push(`(${ph.join(', ')})`);
-          }
-          const sql = `INSERT INTO ${table} (${columnNames.join(', ')}) VALUES ${placeholders.join(', ')}`;
-          await db.query(sql, values);
-        }
-      }
-    } catch (rollbackErr) {
-      // If rollback also fails, re-throw the original error with context
-      throw new Error(
-        `Restore failed and rollback also failed. Original error: ${err instanceof Error ? err.message : String(err)}. Rollback error: ${rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr)}`,
-      );
-    }
-    throw new Error(
-      `Restore failed — database was rolled back to its previous state. Error: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  } finally {
-    await db.query(`SET session_replication_role = 'origin'`);
-  }
 
-  if (restoreFailed) return;
+    // Normalize and reconcile debt data after all parent/child rows exist.
+    // This makes legacy backups behave like native current-version backups.
+    await reconcileRestoredDebtData(db);
 
-  // Re-sync sequences to max(id) after successful restore
-  for (const table of DB_TABLES) {
-    try {
-      const tableData = tableMap.get(table);
-      if (tableData && tableData.rows.length > 0) {
+    // Re-sync sequences before committing so newly created records continue from
+    // the restored maximum id. Tables without an id sequence are simply skipped.
+    for (const table of DB_TABLES) {
+      try {
         await db.query(
           `SELECT setval('${table}_id_seq', COALESCE((SELECT MAX(id) FROM ${table}), 1), true)`,
         );
+      } catch {
+        // Table may not have an id sequence.
       }
-    } catch {
-      // Table may not have an id sequence
     }
+
+    await db.query('COMMIT');
+  } catch (err) {
+    try {
+      await db.query('ROLLBACK');
+    } catch {
+      // Preserve the original restore error.
+    }
+    throw new Error(
+      `Restore failed — database was left unchanged. Error: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 }
 
@@ -331,7 +405,7 @@ export async function importDatabaseSnapshot(snapshot: DatabaseSnapshot): Promis
 export async function backupToFolder(): Promise<{ success: boolean; path?: string; error?: string }> {
   try {
     const snapshot = await exportDatabaseSnapshot();
-    const json = JSON.stringify(snapshot, null, 2);
+    const json = JSON.stringify(snapshot);
     const fileName = `dms-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
 
     if (isTauri()) {
@@ -386,6 +460,10 @@ export async function restoreFromFile(): Promise<{ success: boolean; error?: str
         };
         input.click();
       });
+    }
+
+    if (json.length > MAX_BACKUP_JSON_CHARS) {
+      throw new Error('Backup file is too large to process safely.');
     }
 
     // Parse JSON — catch syntax errors with a clear message

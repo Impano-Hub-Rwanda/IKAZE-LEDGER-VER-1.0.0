@@ -1,3 +1,4 @@
+import { useLanguage } from '../../i18n';
 import { useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, Database, Wifi, WifiOff } from 'lucide-react';
 import { isTauri } from '../../lib/tauri';
@@ -8,6 +9,7 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ dbStatus, lastBackup }: StatusBarProps) {
+  const { t } = useLanguage();
   const [desktop, setDesktop] = useState(false);
   const [time, setTime] = useState(new Date());
 
@@ -47,7 +49,7 @@ export function StatusBar({ dbStatus, lastBackup }: StatusBarProps) {
             <WifiOff className="h-3 w-3" /> Web
           </span>
         )}
-        <span className="text-slate-400 dark:text-slate-500">Powered by MUD</span>
+        <span className="text-slate-400 dark:text-slate-500">{t.ui.poweredByMudShort}</span>
       </div>
     </footer>
   );

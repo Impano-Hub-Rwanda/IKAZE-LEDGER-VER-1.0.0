@@ -328,7 +328,7 @@ export function LoginForm() {
                       text-white
                     "
                   >
-                    Customers in your system
+                    {t.auth.customersInSystem}
                   </p>
                 </div>
               </div>
@@ -396,7 +396,7 @@ export function LoginForm() {
                   text-slate-400
                 "
               >
-                Offline • Secure • Local Database
+                {t.auth.offlineSecureLocal}
               </span>
             </div>
           </div>

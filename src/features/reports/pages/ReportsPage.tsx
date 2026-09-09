@@ -56,7 +56,14 @@ interface ReportResult {
   };
 }
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
+const localDateKey = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const todayStr = () => localDateKey(new Date());
 
 const padNum = (n: number): string => String(n).padStart(3, '0');
 
@@ -121,7 +128,7 @@ export function ReportsPage() {
   const dateRangeFor = (key: ReportType): { start: string; end: string } => {
     const now = new Date();
     if (key === 'daily') {
-      const s = now.toISOString().slice(0, 10);
+      const s = localDateKey(now);
       return { start: s, end: s };
     }
     if (key === 'weekly') {
@@ -130,12 +137,12 @@ export function ReportsPage() {
       monday.setDate(now.getDate() - day + (day === 0 ? -6 : 0));
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
-      return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
+      return { start: localDateKey(monday), end: localDateKey(sunday) };
     }
     if (key === 'monthly') {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+      return { start: localDateKey(start), end: localDateKey(end) };
     }
     return { start: from, end: to };
   };
@@ -159,6 +166,11 @@ export function ReportsPage() {
     try {
       const db = getDb();
       const { start, end } = dateRangeFor(reportType);
+      if (start > end) {
+        setError('The start date cannot be after the end date.');
+        setLoading(false);
+        return;
+      }
       let res: ReportResult;
 
       if (reportType === 'customer_statement') {
@@ -183,9 +195,9 @@ export function ReportsPage() {
             `SELECT p.id, p.amount, p.method, p.paid_at, p.debt_id
              FROM payments p JOIN debts d ON d.id = p.debt_id
              WHERE d.customer_id = $1
-             ${statementFilter === 'payments' ? 'AND p.paid_at >= $2 AND p.paid_at < $3' : ''}
+             ${statementFilter === 'payments' ? "AND p.paid_at >= $2 AND p.paid_at < ($3::date + INTERVAL '1 day')" : ''}
              ORDER BY p.paid_at ASC`,
-            statementFilter === 'payments' ? [customerId, start + 'T00:00:00', end + 'T23:59:59'] : [customerId],
+            statementFilter === 'payments' ? [customerId, start, end] : [customerId],
           );
           const pays = payRes.rows as typeof payRes.rows;
           const methodLabels: Record<string, string> = {
@@ -239,11 +251,13 @@ export function ReportsPage() {
           // Full statement: combine debts and payments chronologically
           const debtRes = await db.query<{ id: number; total_amount: number; paid_amount: number; status: string; created_at: string; due_date: string | null }>(
             `SELECT d.id, d.total_amount, d.paid_amount, d.status, d.created_at, d.due_date
-             FROM debts d WHERE d.customer_id = $1
-             ${statementFilter === 'outstanding' ? "AND d.status != 'paid'" : ''}
-             ${statementFilter === 'paid' ? "AND d.status = 'paid'" : ''}
+             FROM debts d
+             WHERE d.customer_id = $1
+               AND d.created_at < ($2::date + INTERVAL '1 day')
+               ${statementFilter === 'outstanding' ? "AND d.status != 'paid'" : ''}
+               ${statementFilter === 'paid' ? "AND d.status = 'paid'" : ''}
              ORDER BY d.created_at ASC`,
-            [customerId],
+            [customerId, end],
           );
           const debts = debtRes.rows as typeof debtRes.rows;
 
@@ -253,16 +267,32 @@ export function ReportsPage() {
           if (debtIds.length) {
             const payRes = await db.query<{ debt_id: number; amount: number; paid_at: string; method: string }>(
               `SELECT p.debt_id, p.amount, p.paid_at, p.method
-               FROM payments p WHERE p.debt_id = ANY($1)
+               FROM payments p
+               WHERE p.debt_id = ANY($1)
+                 AND p.paid_at < ($2::date + INTERVAL '1 day')
                ORDER BY p.paid_at ASC`,
-              [debtIds],
+              [debtIds, end],
             );
             allPayments = payRes.rows as typeof payRes.rows;
 
             const itemRes = await db.query<{ debt_id: number; product_name: string; quantity: number; unit_price: number; subtotal: number }>(
-              `SELECT debt_id, product_name, quantity, unit_price, subtotal
-               FROM debt_items WHERE debt_id = ANY($1)
-               ORDER BY id ASC`,
+              `SELECT di.debt_id,
+                      COALESCE(
+                        NULLIF(TRIM(di.product_name), ''),
+                        NULLIF(TRIM(p.name), ''),
+                        NULLIF(TRIM(s.name), ''),
+                        CASE
+                          WHEN di.item_type = 'service' AND di.service_id IS NOT NULL THEN CONCAT('Service #', di.service_id)
+                          WHEN di.product_id IS NOT NULL THEN CONCAT('Product #', di.product_id)
+                          ELSE 'Item'
+                        END
+                      ) AS product_name,
+                      di.quantity, di.unit_price, di.subtotal
+               FROM debt_items di
+               LEFT JOIN products p ON p.id = di.product_id
+               LEFT JOIN services s ON s.id = di.service_id
+               WHERE di.debt_id = ANY($1)
+               ORDER BY di.id ASC`,
               [debtIds],
             );
             allItems = itemRes.rows as typeof itemRes.rows;
@@ -291,10 +321,28 @@ export function ReportsPage() {
           });
 
           interface TimelineEvent { timestamp: string; type: 'debt' | 'payment'; data: unknown }
+          const startTs = new Date(`${start}T00:00:00`).getTime();
+          const endTs = new Date(`${end}T23:59:59.999`).getTime();
+          for (const d of debts) {
+            if (new Date(d.created_at).getTime() < startTs) runningBalance += Number(d.total_amount);
+          }
+          for (const p of allPayments) {
+            if (new Date(p.paid_at).getTime() < startTs) runningBalance -= Number(p.amount);
+          }
+
           const timeline: TimelineEvent[] = [];
-          debts.forEach((d) => timeline.push({ timestamp: d.created_at, type: 'debt', data: d }));
-          allPayments.forEach((p) => timeline.push({ timestamp: p.paid_at, type: 'payment', data: p }));
-          timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          debts.forEach((d) => {
+            const ts = new Date(d.created_at).getTime();
+            if (ts >= startTs && ts <= endTs) timeline.push({ timestamp: d.created_at, type: 'debt', data: d });
+          });
+          allPayments.forEach((p) => {
+            const ts = new Date(p.paid_at).getTime();
+            if (ts >= startTs && ts <= endTs) timeline.push({ timestamp: p.paid_at, type: 'payment', data: p });
+          });
+          timeline.sort((a, b) => {
+            const diff = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+            return diff || (a.type === 'debt' ? -1 : 1);
+          });
 
           for (const event of timeline) {
             if (event.type === 'debt') {
@@ -357,9 +405,20 @@ export function ReportsPage() {
             }
           }
 
-          const totalPurchases = debts.reduce((s, d) => s + Number(d.total_amount), 0);
-          const totalPayments = allPayments.reduce((s, p) => s + Number(p.amount), 0);
-          const closingBalance = totalPurchases - totalPayments;
+          const openingBalance = debts.reduce((sum, d) => {
+            return new Date(d.created_at).getTime() < startTs ? sum + Number(d.total_amount) : sum;
+          }, 0) - allPayments.reduce((sum, p) => {
+            return new Date(p.paid_at).getTime() < startTs ? sum + Number(p.amount) : sum;
+          }, 0);
+          const totalPurchases = debts.reduce((sum, d) => {
+            const ts = new Date(d.created_at).getTime();
+            return ts >= startTs && ts <= endTs ? sum + Number(d.total_amount) : sum;
+          }, 0);
+          const totalPayments = allPayments.reduce((sum, p) => {
+            const ts = new Date(p.paid_at).getTime();
+            return ts >= startTs && ts <= endTs ? sum + Number(p.amount) : sum;
+          }, 0);
+          const closingBalance = openingBalance + totalPurchases - totalPayments;
 
           const rows = ledger.map((e, i) => ({
             no: padNum(i + 1),
@@ -396,14 +455,14 @@ export function ReportsPage() {
               emptyMessage: tr.noData,
             }],
             summary: [
-              { label: tr.openingBalance, value: formatCurrency(0) },
+              { label: tr.openingBalance, value: formatCurrency(openingBalance) },
               { label: tr.totalPurchases, value: formatCurrency(totalPurchases) },
               { label: tr.totalPayments, value: formatCurrency(totalPayments) },
               { label: tr.closingBalance, value: formatCurrency(closingBalance) },
             ],
             customerInfo: {
               name: cust.full_name, phone: cust.phone ?? '—', address: cust.address ?? '—',
-              openingBalance: formatCurrency(0),
+              openingBalance: formatCurrency(openingBalance),
               totalPurchases: formatCurrency(totalPurchases),
               totalPayments: formatCurrency(totalPayments),
               closingBalance: formatCurrency(closingBalance),
@@ -621,7 +680,7 @@ export function ReportsPage() {
         const endDate = new Date(end);
         endDate.setDate(endDate.getDate() + 1);
         const startTs = start + 'T00:00:00';
-        const endTs = endDate.toISOString().slice(0, 10) + 'T00:00:00';
+        const endTs = localDateKey(endDate) + 'T00:00:00';
 
         const activityRows: Record<string, string | number>[] = [];
         let totalDebtsAmount = 0;
@@ -640,23 +699,43 @@ export function ReportsPage() {
         const debts = debtRes.rows as typeof debtRes.rows;
 
         // Batch fetch all debt_items for these debts — avoids N+1 queries
+        const itemNamesByDebt = new Map<number, string[]>();
         if (debts.length > 0) {
           const debtIds = debts.map((d) => d.id);
-          const itemsRes = await db.query<{ debt_id: number; item_type: string; quantity: number }>(
-            `SELECT debt_id, item_type, quantity FROM debt_items WHERE debt_id = ANY($1)`,
+          const itemsRes = await db.query<{ debt_id: number; item_type: string; quantity: number; product_name: string }>(
+            `SELECT di.debt_id, di.item_type, di.quantity,
+                    COALESCE(
+                      NULLIF(TRIM(di.product_name), ''),
+                      NULLIF(TRIM(p.name), ''),
+                      NULLIF(TRIM(s.name), ''),
+                      CASE
+                        WHEN di.item_type = 'service' AND di.service_id IS NOT NULL THEN CONCAT('Service #', di.service_id)
+                        WHEN di.product_id IS NOT NULL THEN CONCAT('Product #', di.product_id)
+                        ELSE 'Item'
+                      END
+                    ) AS product_name
+             FROM debt_items di
+             LEFT JOIN products p ON p.id = di.product_id
+             LEFT JOIN services s ON s.id = di.service_id
+             WHERE di.debt_id = ANY($1)
+             ORDER BY di.debt_id, di.id`,
             [debtIds],
           );
           for (const item of (itemsRes.rows as typeof itemsRes.rows)) {
             if (item.item_type === 'service') servicesSold += Number(item.quantity);
             else itemsSold += Number(item.quantity);
+            const names = itemNamesByDebt.get(item.debt_id) ?? [];
+            names.push(`${item.product_name} × ${Number(item.quantity)}`);
+            itemNamesByDebt.set(item.debt_id, names);
           }
         }
 
         for (const d of debts) {
           totalDebtsAmount += Number(d.total_amount);
+          const itemSummary = (itemNamesByDebt.get(d.id) ?? []).join(', ');
           activityRows.push({
             no: '', date: formatDate(d.created_at), type: tr.activityDebt,
-            description: `Debt #${d.id}`, amount: formatCurrency(Number(d.total_amount)), customer: d.customer_name,
+            description: itemSummary ? `Debt #${d.id} — ${itemSummary}` : `Debt #${d.id}`, amount: formatCurrency(Number(d.total_amount)), customer: d.customer_name,
             _ts: new Date(d.created_at).getTime(),
           });
         }
@@ -780,6 +859,11 @@ export function ReportsPage() {
       summary: result.summary,
       customHeader: app.reportHeader ?? undefined,
       customFooter: app.reportFooter ?? undefined,
+      customerInfo: result.customerInfo ? {
+        name: result.customerInfo.name,
+        phone: result.customerInfo.phone !== '—' ? result.customerInfo.phone : undefined,
+        address: result.customerInfo.address !== '—' ? result.customerInfo.address : undefined,
+      } : undefined,
     };
   };
 
@@ -814,6 +898,11 @@ export function ReportsPage() {
         showWatermark,
         customHeader: app.reportHeader ?? undefined,
         customFooter: app.reportFooter ?? undefined,
+        customerInfo: result.customerInfo ? {
+          name: result.customerInfo.name,
+          phone: result.customerInfo.phone !== '—' ? result.customerInfo.phone : undefined,
+          address: result.customerInfo.address !== '—' ? result.customerInfo.address : undefined,
+        } : undefined,
       },
       info,
     );
@@ -929,7 +1018,7 @@ export function ReportsPage() {
               </div>
             </div>
           </div>
-          <Button onClick={generate} disabled={loading} size="lg">
+          <Button variant="violet" onClick={generate} disabled={loading} size="lg">
             <span className="flex items-center gap-2">
               {loading ? <Spinner size="sm" /> : <FileText className="h-5 w-5" />}
               {tr.generate}
@@ -985,11 +1074,11 @@ export function ReportsPage() {
             {result.summary.map((s, i) => (
               <div
                 key={s.label}
-                className="card-base p-4"
+                className="card-base p-2.5"
                 style={{ animation: `fade-up 0.4s ease ${i * 60}ms both` }}
               >
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{s.label}</p>
-                <p className="mt-1 text-xl font-bold text-slate-800 dark:text-white">{s.value}</p>
+                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{s.label}</p>
+                <p className="mt-0.5 text-base font-bold text-slate-800 dark:text-white">{s.value}</p>
               </div>
             ))}
           </div>

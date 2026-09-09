@@ -4,11 +4,11 @@ import {
   Database as DbIcon, HardDrive, Info, Save, Upload, Download,
   RotateCcw, RefreshCw, AlertCircle, LogOut, FolderOpen,
   CheckCircle2, XCircle, Phone, User, Trash2,
-  Power, Keyboard, Image as ImageIcon,
+  Power, Keyboard,
 } from 'lucide-react';
 import { useLanguage } from '../../../i18n';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useTheme } from '../../../contexts/ThemeContext';
+import { useTheme, type Accent } from '../../../contexts/ThemeContext';
 import { getDb } from '../../../lib/database';
 import { getBusinessInfo, getAppSettings, invalidateSettingsCache, type BusinessInfo, type AppSettings } from '../../../lib/exportReport';
 import { verifyPassword, hashPassword } from '../../../utils/crypto';
@@ -47,13 +47,13 @@ interface HealthCheck {
 
 type FlashType = 'success' | 'error' | 'info';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.8';
 const DEVELOPER = 'Marcel UWIMANA';
 const DEVELOPER_PHONE = '0780937633';
 
 export function SettingsPage() {
   const { t, setLanguage } = useLanguage();
-  const { setTheme } = useTheme();
+  const { setTheme, accent, setAccent } = useTheme();
   const { user, logout } = useAuth();
 
   const [tab, setTab] = useState<Tab>('business');
@@ -155,7 +155,7 @@ export function SettingsPage() {
       const db = getDb();
       await db.query(
         `UPDATE settings SET language=$1, theme=$2, date_format=$3, receipt_width=$4,
-         report_paper_size=$5, auto_print_debt=$6, auto_print_payment=$7,
+         report_paper_size=$5, auto_print_debt=$6, auto_print_payment=$7, auto_print_configured=TRUE,
          startup_page=$8, auto_save=$9, session_timeout_minutes=$10,
          minimize_to_tray=$11 WHERE id=1`,
         [app.language, app.theme, app.dateFormat, app.receiptWidth,
@@ -361,8 +361,12 @@ export function SettingsPage() {
     try {
       const info = await checkForUpdates();
       setUpdateInfo(info);
-      if (info && info.available) {
-        flash('info', `Update ${info.version} is available!`);
+      if (info?.error) {
+        flash('error', `Update failed: ${info.error}`);
+      } else if (info?.installed) {
+        flash('success', `Update ${info.version ?? ''} installed. Restarting…`);
+      } else if (info?.available) {
+        flash('success', `Update ${info.version ?? ''} is being installed…`);
       } else if (info && !info.available) {
         flash('success', 'You are running the latest version');
       } else {
@@ -400,7 +404,7 @@ export function SettingsPage() {
     <div className="animate-page-in space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">{t.settings.title}</h1>
-        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Administration Center</p>
+        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">{t.ui.administrationCenter}</p>
       </div>
 
       {msg && <Alert variant={msg.type === 'info' ? 'info' : msg.type}>{msg.text}</Alert>}
@@ -436,7 +440,7 @@ export function SettingsPage() {
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">{t.settings.logo}</label>
                 <div className="flex items-center gap-4">
                   <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-700/50">
-                    {biz.logoData ? <img src={biz.logoData} alt="Logo" className="h-full w-full object-contain" /> : <ImageIcon className="h-8 w-8 text-slate-400" />}
+                    {biz.logoData ? <img src={biz.logoData} alt="Logo" className="h-full w-full object-contain" /> : <img src="/icon.png" alt="Ikaze Ledger" className="h-10 w-10 object-contain" loading="eager" decoding="async" />}
                   </div>
                   <div className="flex flex-col gap-2">
                     <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={handleLogoUpload} className="hidden" />
@@ -448,7 +452,7 @@ export function SettingsPage() {
                         <span className="flex items-center gap-1.5"><Trash2 className="h-4 w-4" /> Remove</span>
                       </Button>
                     )}
-                    <p className="text-xs text-slate-400">PNG/JPG/SVG, max 500KB</p>
+                    <p className="text-xs text-slate-400">{t.ui.logoFileHint}</p>
                   </div>
                 </div>
               </div>
@@ -511,6 +515,21 @@ export function SettingsPage() {
             <Select label={t.settings.theme} name="theme" value={app.theme}
               onChange={(e) => setApp({ ...app, theme: e.target.value as 'light' | 'dark' })}
               options={[{ value: 'light', label: t.theme.light }, { value: 'dark', label: t.theme.dark }]} />
+            <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+              <div className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Primary Color</div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  ['teal', '#0d9488'], ['blue', '#2563eb'], ['indigo', '#4f46e5'],
+                  ['violet', '#7c3aed'], ['cyan', '#0891b2'], ['orange', '#ea580c'],
+                  ['emerald', '#059669'], ['rose', '#e11d48'], ['amber', '#d97706'], ['fuchsia', '#c026d3'],
+                ].map(([value, color]) => (
+                  <button key={value} type="button" onClick={() => setAccent(value as Accent)}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold capitalize transition ${accent === value ? 'border-slate-900 ring-2 ring-slate-300 dark:border-white dark:ring-slate-600' : 'border-slate-200 dark:border-slate-700'}`}>
+                    <span className="h-4 w-4 rounded-full" style={{ backgroundColor: color }} />{value}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Select label={t.settings.dateFormat} name="df" value={app.dateFormat}
               onChange={(e) => setApp({ ...app, dateFormat: e.target.value })}
               options={[{ value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' }, { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' }, { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' }]} />
@@ -531,7 +550,8 @@ export function SettingsPage() {
           </div>
 
           <div className="space-y-3 rounded-lg bg-slate-50 p-4 dark:bg-slate-700/30">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Automation</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.ui.automation}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Auto-print is opt-in. Turn on the document types you want to print automatically after saving.</p>
             <ToggleRow label={t.settings.autoPrintDebt} checked={app.autoPrintDebt}
               onChange={(v) => setApp({ ...app, autoPrintDebt: v })} />
             <ToggleRow label={t.settings.autoPrintPayment} checked={app.autoPrintPayment}
@@ -554,7 +574,7 @@ export function SettingsPage() {
             placeholder="Optional header text on receipts" />
 
           <div className="space-y-3 rounded-lg bg-slate-50 p-4 dark:bg-slate-700/30">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Receipt Elements</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.ui.receiptElements}</p>
             <ToggleRow label="Show Logo on Receipt" checked={app.receiptShowLogo}
               onChange={(v) => setApp({ ...app, receiptShowLogo: v })} />
             <ToggleRow label="Show Signature Line" checked={app.receiptShowSignature}
@@ -627,7 +647,7 @@ export function SettingsPage() {
                 onChange={(e) => setConfirmPwd(e.target.value)} />
             </div>
             <div className="flex justify-end">
-              <Button onClick={changePassword}>
+              <Button variant="amber" onClick={changePassword}>
                 <span className="flex items-center gap-2"><Save className="h-4 w-4" /> {t.settings.updatePwd}</span>
               </Button>
             </div>
@@ -746,7 +766,7 @@ export function SettingsPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">Backup Folder</label>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">{t.ui.backupFolder}</label>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -782,7 +802,7 @@ export function SettingsPage() {
             <input type="number" min="1" max="20" value={autoBackup.maxBackups}
               onChange={(e) => setAutoBackup({ ...autoBackup, maxBackups: Number(e.target.value) })}
               className="input-base max-w-[200px]" />
-            <p className="mt-1 text-xs text-slate-400">Older backups beyond this count are automatically deleted.</p>
+            <p className="mt-1 text-xs text-slate-400">{t.ui.olderBackupsHint}</p>
           </div>
 
           <SaveBar onSave={saveAutoBackup} saving={false} label="Save Auto-Backup" />
@@ -818,7 +838,7 @@ export function SettingsPage() {
                 Ikaze Ledger is an offline-first debt and customer management application built for small and medium businesses. It lets you record customer debts, track partial and full payments, manage product inventory and services, issue professional proforma invoices, and generate printable reports and receipts — all without an internet connection. Your data stays securely on your device, with built-in backup and restore for peace of mind.
               </p>
               <div className="mt-4 rounded-lg bg-teal-50 px-6 py-2 text-sm font-bold text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">
-                Powered by MUD software company
+                Powered by MUD
               </div>
             </div>
           </div>
@@ -869,7 +889,7 @@ export function SettingsPage() {
           <div className="card-base p-6">
             <div className="text-center text-xs text-slate-400 dark:text-slate-500">
               <p>© 2026 MUD — {DEVELOPER}. All rights reserved.</p>
-              <p className="mt-1">Powered by MUD</p>
+              <p className="mt-1">{t.ui.poweredByMudShort}</p>
             </div>
           </div>
         </div>
@@ -929,7 +949,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 function SaveBar({ onSave, saving, label }: { onSave: () => void; saving: boolean; label: string }) {
   return (
     <div className="flex justify-end border-t border-slate-100 pt-4 dark:border-slate-700">
-      <Button onClick={onSave} disabled={saving}>
+      <Button variant="amber" onClick={onSave} disabled={saving}>
         <span className="flex items-center gap-2">
           {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />} {label}
         </span>
