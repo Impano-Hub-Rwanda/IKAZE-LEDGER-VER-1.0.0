@@ -16,19 +16,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply 1.0.9 release UI fixes
-        shell: pwsh
-        run: |
-          $path = "src/features/settings/pages/SettingsPage.tsx"
-          $s = Get-Content $path -Raw
-          $s = $s.Replace("const APP_VERSION = '1.0.8';", "const APP_VERSION = '1.0.9';")
-          $s = $s.Replace("openFolderPicker, isTauri, checkForUpdates, downloadAndInstallUpdate,", "openFolderPicker, isTauri, checkForUpdates,")
-          $s = [regex]::Replace($s, '(?s)\{updateInfo\?\.available \? \(.*?\) : updateInfo && !updateInfo\.available \? \(', '{updateInfo?.error ? (`n                <p className="text-sm text-red-600 dark:text-red-400">Update failed: {updateInfo.error}</p>`n              ) : updateInfo?.available ? (`n                <div className="w-full rounded-lg bg-blue-50 p-4 dark:bg-blue-900/30">`n                  <p className="font-semibold text-blue-700 dark:text-blue-300">`n                    Update {updateInfo.version} is being installed…`n                  </p>`n                  {updateInfo.body && (`n                    <p className="mt-1 text-sm text-blue-600 dark:text-blue-400">{updateInfo.body}</p>`n                  )}`n                </div>`n              ) : updateInfo && !updateInfo.available ? (')
-          $s = [regex]::Replace($s, '(?m)^  const handleInstallUpdate = useCallback\(async \(\) => \{\r?\n    await downloadAndInstallUpdate\(\);\r?\n  \}, \[\]\);\r?\n', '')
-          Set-Content $path $s -NoNewline
-          if ($s -notmatch "const APP_VERSION = '1\.0\.9';") { throw "SettingsPage version patch failed" }
-          if ($s -match 'handleInstallUpdate|downloadAndInstallUpdate') { throw "Redundant manual updater handler remains" }
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
