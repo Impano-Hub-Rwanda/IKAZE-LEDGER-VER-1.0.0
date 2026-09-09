@@ -1,6 +1,6 @@
 [package]
 name = "Ikaze-Ledger"
-version = "1.0.9"
+version = "1.0.10"
 description = "Professional debt management for small businesses"
 authors = ["Marcel UWIMANA"]
 edition = "2021"
