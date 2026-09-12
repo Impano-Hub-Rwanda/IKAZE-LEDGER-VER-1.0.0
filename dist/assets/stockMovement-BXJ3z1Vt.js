@@ -1,0 +1,4 @@
+import{g as c}from"./index-BCQsFW6n.js";async function w(i){const t=c(),{productId:r,userId:u,movementType:s,quantityChange:e,reason:n,manageTransaction:o=!0}=i;if(!Number.isInteger(r)||r<=0)throw new Error("Invalid product id");if(!Number.isInteger(e)||e===0)throw new Error("Invalid stock change");if(!n.trim())throw new Error("Stock movement reason is required");o&&await t.query("BEGIN");try{if(!(await t.query(`UPDATE products
+       SET stock_quantity = stock_quantity + $1, updated_at = now()
+       WHERE id = $2 AND stock_quantity + $1 >= 0
+       RETURNING id`,[e,r])).rows[0])throw new Error("Insufficient stock or product not found");await t.query("INSERT INTO inventory_movements (product_id, user_id, movement_type, quantity_change, reason) VALUES ($1, $2, $3, $4, $5)",[r,u,s,e,n]),o&&await t.query("COMMIT")}catch(a){throw o&&await t.query("ROLLBACK"),a}}export{w as a};

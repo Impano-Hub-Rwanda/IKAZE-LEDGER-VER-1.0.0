@@ -1,0 +1,6 @@
+node_modules/
+.env
+
+# Tauri updater signing keys (never commit private keys)
+*.key
+*.key.pub
